@@ -1,13 +1,30 @@
+extern crate serde;
+extern crate serde_yaml;
+
+use serde::{Deserialize, Serialize};
 use std::env::{self};
 use std::iter::*;
 use std::fs::File;
 use std::io::*;
-//use std::io::prelude::*;
 
-//extern crate yaml_rust;
+mod helper;
 
-pub fn run<String: std::fmt::Debug>(argsv: Vec<String>) {
-    println!("{:?}", argsv);
+#[derive(Debug, Serialize, Deserialize)]
+struct ProjectConfig {
+    name: String,
+    description: String,
+    version: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RunConfig {
+    run: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct PluConfig {
+    project: ProjectConfig,
+    r#do: RunConfig,
 }
 
 pub fn new(argsv: Vec<String>) {
@@ -36,7 +53,7 @@ pub fn cli() {
     if argparse(args.clone(), 1, "new".to_string()) {
         new(args); // Create new plufile
     } else if argparse(args.clone(), 1, "run".to_string()) {
-        run(args); // Run plufile
+        let _ = helper::run(); // Run plufile
     } else {
         println!("Invalid Argument");
     }
