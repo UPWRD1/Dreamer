@@ -21,15 +21,27 @@ struct RunConfig {
     run: Vec<String>,
 }
 
+
 #[derive(Debug, Serialize, Deserialize)]
 struct PluConfig {
     project: ProjectConfig,
     r#do: RunConfig,
 }
 
+pub fn help() {
+    println!(r"                   
+    _____ _           _           
+    |  _  | |_ _ _____| |_ ___ ___ 
+    |   __| | | |     | . | -_|  _|
+    |__|  |_|___|_|_|_|___|___|_|                                
+    ");
+    println!("Plumber is a universal project manager.");
+    println!("Options:");
+ }
+  
 pub fn new(argsv: Vec<String>) {
     if argsv.len() < 3 {
-        panic!("\n Not enough arguments! Usage: \n \t plumber new <pipename>")
+        panic!("\n Not enough arguments! Usage: \n \t plumber new <pipename>");
     }
     let plufile_name: String = format!("{}.plu.yaml", &argsv[2]);
     println!("    ~> New pipe: {}", plufile_name);
@@ -54,6 +66,10 @@ pub fn cli() {
         new(args); // Create new plufile
     } else if argparse(args.clone(), 1, "run".to_string()) {
         let _ = helper::run(); // Run plufile
+    } else if (argparse(args.clone(), 1,"help".to_string())) || 
+              (argparse(args.clone(), 1, "--help".to_string())) ||
+              (argparse(args.clone(), 1, "-h".to_string())) {
+        help(); //help
     } else {
         println!("Invalid Argument");
     }
