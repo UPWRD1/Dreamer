@@ -2,17 +2,28 @@ use std::env::{self};
 use std::iter::*;
 use std::fs::File;
 use std::io::*;
+
 //use std::io::prelude::*;
 
 //extern crate yaml_rust;
 
-pub fn run<String: std::fmt::Debug>(argsv: Vec<String>) {
-    println!("{:?}", argsv);
+pub fn run(_args: Vec<String>) {
+
+}
+pub fn help() {
+    println!(r"                   
+    _____ _           _           
+    |  _  | |_ _ _____| |_ ___ ___ 
+    |   __| | | |     | . | -_|  _|
+    |__|  |_|___|_|_|_|___|___|_|                                
+    ");
+    println!("Plumber is a universal project manager.");
+    println!("Options:");
 }
 
 pub fn new(argsv: Vec<String>) {
     if argsv.len() < 3 {
-        panic!("\n Not enough arguments! Usage: \n \t plumber new <pipename>")
+        panic!("\n Not enough arguments! Usage: \n \t plumber new <pipename>");
     }
     let plufile_name: String = format!("{}.plu.yaml", &argsv[2]);
     println!("    ~> New pipe: {}", plufile_name);
@@ -37,6 +48,10 @@ pub fn cli() {
         new(args); // Create new plufile
     } else if argparse(args.clone(), 1, "run".to_string()) {
         run(args); // Run plufile
+    } else if (argparse(args.clone(), 1,"help".to_string())) || 
+              (argparse(args.clone(), 1, "--help".to_string())) ||
+              (argparse(args.clone(), 1, "-h".to_string())) {
+        help(); //help
     } else {
         println!("Invalid Argument");
     }
