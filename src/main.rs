@@ -1,15 +1,33 @@
+extern crate serde;
+extern crate serde_yaml;
+
+use serde::{Deserialize, Serialize};
 use std::env::{self};
 use std::iter::*;
 use std::fs::File;
 use std::io::*;
 
-//use std::io::prelude::*;
+mod helper;
 
-//extern crate yaml_rust;
-
-pub fn run(_args: Vec<String>) {
-
+#[derive(Debug, Serialize, Deserialize)]
+struct ProjectConfig {
+    name: String,
+    description: String,
+    version: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RunConfig {
+    run: Vec<String>,
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+struct PluConfig {
+    project: ProjectConfig,
+    r#do: RunConfig,
+}
+
 pub fn help() {
     println!(r"                   
     _____ _           _           
@@ -19,8 +37,8 @@ pub fn help() {
     ");
     println!("Plumber is a universal project manager.");
     println!("Options:");
-}
-
+ }
+  
 pub fn new(argsv: Vec<String>) {
     if argsv.len() < 3 {
         panic!("\n Not enough arguments! Usage: \n \t plumber new <pipename>");
@@ -47,7 +65,7 @@ pub fn cli() {
     if argparse(args.clone(), 1, "new".to_string()) {
         new(args); // Create new plufile
     } else if argparse(args.clone(), 1, "run".to_string()) {
-        run(args); // Run plufile
+        let _ = helper::run(); // Run plufile
     } else if (argparse(args.clone(), 1,"help".to_string())) || 
               (argparse(args.clone(), 1, "--help".to_string())) ||
               (argparse(args.clone(), 1, "-h".to_string())) {
