@@ -7,5 +7,4 @@ project: {
 do:
   run:
     - echo hello world,
-
-  test:
+    - echo this is a test
