@@ -1,5 +1,5 @@
-extern crate serde;
-extern crate serde_yaml;
+//extern crate serde;
+//extern crate serde_yaml;
 
 use std::env::{self};
 use std::iter::*;
