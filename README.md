@@ -6,7 +6,7 @@ any build system, and any framework. Here's how:
 
 ```
 $ unify new myProject --python
-    [i] Creating new project 'myProject'...
+    [i] Creating new project 'myProject' with python template...
 
 $ unify add myPack
     [!] Package 'myPack' has multiple versions!
