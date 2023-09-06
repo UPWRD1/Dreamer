@@ -5,7 +5,7 @@ Unify is a universal package and project management system for any language,
 any build system, and any framework. Here's how:
 
 ```
-$ unify new myProject
+$ unify new myProject --python
     [i] Creating new project 'myProject'...
 
 $ unify add myPack
