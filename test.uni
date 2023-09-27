@@ -1,0 +1,83 @@
+&project:
+    ["name", ""]
+    ["description", ""]
+    ["version", 0.0.0]
+
+&deps: (
+    &tools (
+        ["pip", latest];
+        ["npm", latest];
+    );
+    &packages <index="pypi"> (
+        ["flask", ^2.2.3];
+        ["colored", 2.2.*];
+        ["translate", ~3.6.1];
+    );
+    &packages <index="npm"> (
+        ["idk", 0.0.1];
+    );
+)
+
+-- do stuff idk
+&run:
+    @out("Hello world!");
+    @install(deps);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- comments are cool
+--- 
+block comments
+conventions:
+
+;   line delimiter
+=   assignment
+==  equality
+<   less than
+>   greater than
+<   less than or equal
+>   greater than or equal
+!   logical not
+||  logical or
+&&  logical and
+
+:   keyword prefix
+
+@   native function
+        examples:
+            @out
+            @install
+            @check
+            @quit
+
+%   user functions
+
+$   user variables
+$$  project variables/constants
+
+#   section header
+
+{}  blocks
+[]  lists
+()  paremeters
+""  string
+00  numbers
+---
