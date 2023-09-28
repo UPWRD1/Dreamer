@@ -6,7 +6,7 @@ use std::env::{self};
 use std::iter::*;
 
 mod helper;
-use helper::{argparse, help, invalid_args_notify, init, run, INITCMD, RUNCMD, HELPCMD };
+use helper::{argparse, help, init, invalid_args_notify, run, HELPCMD, INITCMD, RUNCMD};
 
 /*
 Error codes:

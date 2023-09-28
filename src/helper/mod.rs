@@ -9,10 +9,13 @@ use serde::{Deserialize, Serialize};
 //use std::array;
 use std::error::Error;
 use std::fs::File;
+use std::path::Path;
 use std::io::BufReader;
 use std::io::Write;
 use std::iter::*;
 use std::process::Command;
+use std::fmt::Arguments;
+use std::io::{self, BufRead};
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
@@ -88,7 +91,7 @@ macro_rules! warnprint {
         eprint!("    {0}  {1}", "[W]".yellow().bold(), format_args!($($arg)*))
     }};
 }
-
+*/
 macro_rules! questionprint {
     () => {
         eprint!("\n")
@@ -97,7 +100,32 @@ macro_rules! questionprint {
         eprint!("    {0} {1}", "[?]".cyan().bold(), format_args!($($arg)*))
     }};
 }
-*/
+
+pub fn read_line_expect<B: BufRead>(src: &mut B) -> io::Result<String> {
+    src.lines().next().map_or(
+        Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "Input BufRead reached EOF before".to_string(),
+        )),
+        |line| line,
+    )
+}
+
+pub fn input_fmt<B: BufRead, W: Write>(
+    src: &mut B,
+    dst: &mut W,
+    fmt: Arguments,
+) -> io::Result<String> {
+    dst.write_fmt(fmt)?;
+    dst.flush()?;
+    read_line_expect(src)
+}
+
+macro_rules! input {
+    () => (read_line_expect(&mut ::std::io::stdin().lock()).unwrap());
+    ($($arg:tt)*) => (input_fmt(&mut ::std::io::stdin().lock(), &mut ::std::io::stdout(), format_args!($($arg)*)).unwrap());
+}
+
 
 macro_rules! successprint {
     () => {
@@ -197,6 +225,28 @@ fn printusetemplate() {
     }
 }
 
+fn createfile(ufile_name: String) {
+    infoprint!("Creating unifile: {}", ufile_name);
+        let mut ufile =
+            File::create(ufile_name).expect("[!] Error encountered while creating file!");
+        ufile
+            .write_all(
+                b"
+project: {
+    name: '',
+    description: '',
+    version: '0.0.0',
+}
+do:
+    run:
+        - echo hello world
+",
+            )
+            .expect("[!] Error while writing to file");
+
+        return Ok("File Created!".to_string());
+}
+
 pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit("run", "Missing Filename!")
@@ -277,25 +327,20 @@ pub fn help() {
 
 pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::String> {
     if argsv.len() == 3 {
-        let ufile_name: String = format!("{}.uni.yaml", &argsv[2]);
-        infoprint!("Creating unifile: {}", ufile_name);
-        let mut ufile =
-            File::create(ufile_name).expect("[!] Error encountered while creating file!");
-        ufile
-            .write_all(b"
-project: {
-    name: '',
-    description: '',
-    version: '0.0.0',
-}
-do:
-    run:
-        - echo hello world
-")
-            .expect("[!] Error while writing to file");
-
-        return Ok("File Created!".to_string());
+        let ufile_name: String = format!("{}.uni.yaml", &argsv[2]).to_owned();
+        let ufile_name_str: &str = &ufile_name[..];
+        if Path::new(ufile_name_str).exists() {
+            errprint!("File {} already Exists!", ufile_name);
+            match input!("Do you want to continue? (Y/N)").as_str() {
+                "y" | "Y" => { createfile(ufile_name); }
+    &_ => {
+        errprint!("INVALID");
+        usage_and_quit(INITCMD.name, "INVALID");
     }
+                }
+            }
+        }
+        
     errprint!("Invalid arguments!");
     return Err("Invalid Arguments!".to_string());
 }
