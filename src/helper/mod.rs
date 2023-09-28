@@ -6,6 +6,7 @@ extern crate serde_yaml;
 //use rand::prelude::*;
 use colored::*;
 use serde::{Deserialize, Serialize};
+//use std::array;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
@@ -13,48 +14,52 @@ use std::io::Write;
 use std::iter::*;
 use std::process::Command;
 
-const SELF_VERSION: &str = "2023 (0.1.0)";
+pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
 #[derive(Debug, Serialize, Deserialize)]
-struct ProjectConfig {
+pub struct ProjectConfig {
     name: String,
     description: String,
     version: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct RunConfig {
+pub struct RunConfig {
     run: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct UniConfig {
+pub struct UniConfig {
     project: ProjectConfig,
     r#do: RunConfig,
 }
 
-struct Cmd<'a> {
-    name: &'a str,
-    desc: &'a str,
-    usage: &'a str,
+pub struct Cmd<'a> {
+    pub name: &'a str,
+    pub desc: &'a str,
+    pub usage: &'a str,
+    pub aliases: [&'a str; 4],
 }
 
-const RUNCMD:Cmd = Cmd {
+pub const RUNCMD: Cmd = Cmd {
     name: "run",
     desc: "Executes a .uni.yaml file",
     usage: "run <filename>",
+    aliases: ["run", "r", "--run", "-r"],
 };
 
-const  HELPCMD:Cmd = Cmd {
+pub const HELPCMD: Cmd = Cmd {
     name: "help",
     desc: "This command",
     usage: "help",
+    aliases: ["help", "h", "--help", "-h"],
 };
 
-const INITCMD:Cmd = Cmd {
+pub const INITCMD: Cmd = Cmd {
     name: "init",
     desc: "Creates a new .uni.yaml file",
     usage: "init <filename>",
+    aliases: ["init", "i", "--init", "-i"],
 };
 
 macro_rules! errprint {
@@ -103,7 +108,7 @@ macro_rules! successprint {
     }};
 }
 
-pub fn printusage(msg: &str) {
+fn printusage(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
         infoprint!("Usage: {0}{1}", " ./unify ".black(), msg.black());
@@ -112,7 +117,7 @@ pub fn printusage(msg: &str) {
     }
 }
 
-pub fn usage(cmd: &str) {
+fn usage(cmd: &str) {
     match cmd {
         "help" => {
             printusage("help");
@@ -123,12 +128,17 @@ pub fn usage(cmd: &str) {
         "new" => {
             printusage("new <filename>");
         }
-        &_ => errprint!("{}", "FATAL ERROR: Invalid command.
-        If you somehow see this, you probably need to reinstall unify, like now.".red().bold()),
+        &_ => errprint!(
+            "{}",
+            "FATAL ERROR: Invalid command.
+        If you somehow see this, you probably need to reinstall unify, like now."
+                .red()
+                .bold()
+        ),
     }
 }
 
-pub fn printusagenb(msg: &str) {
+fn printusagenb(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
         println!("\t Usage: {0}{1}", " ./unify ".black(), msg.black());
@@ -137,7 +147,7 @@ pub fn printusagenb(msg: &str) {
     }
 }
 
-pub fn usagenb(cmd: &str) {
+fn usagenb(cmd: &str) {
     match cmd {
         "help" => {
             printusagenb(&HELPCMD.usage);
@@ -148,12 +158,17 @@ pub fn usagenb(cmd: &str) {
         "init" => {
             printusagenb(&INITCMD.usage);
         }
-        &_ => errprint!("{}", "FATAL ERROR: Invalid command.
-        If you somehow see this, you probably need to reinstall unify, like now.".red().bold()),
+        &_ => errprint!(
+            "{}",
+            "FATAL ERROR: Invalid command.
+        If you somehow see this, you probably need to reinstall unify, like now."
+                .red()
+                .bold()
+        ),
     }
 }
 
-pub fn check_arg_len(argsv: Vec<String>, lentocheck: usize) -> bool {
+fn check_arg_len(argsv: Vec<String>, lentocheck: usize) -> bool {
     if argsv.len() == lentocheck {
         return true;
     } else {
@@ -161,10 +176,25 @@ pub fn check_arg_len(argsv: Vec<String>, lentocheck: usize) -> bool {
     }
 }
 
-pub fn usage_and_quit(cmd: &str, msg: &str) {
+fn usage_and_quit(cmd: &str, msg: &str) {
     errprint!("{}", msg);
     usage(cmd);
     std::process::exit(0);
+}
+
+fn printhelp(cmd: Cmd) {
+    infoprint!("{0} \t Info: {1}", cmd.name, cmd.desc);
+    print!("\t");
+    usagenb(&cmd.name);
+}
+
+fn printusetemplate() {
+    let ostype = std::env::consts::OS;
+    if ostype == "windows" {
+        infoprint!("Usage: unify [--version] [--help] <command> [arguments]");
+    } else if ostype == "linux" || ostype == "macos" {
+        infoprint!("Usage: unify [--version] [--help] <command> [arguments]");
+    }
 }
 
 pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
@@ -205,9 +235,7 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
 
         if cmdcount == okcount {
             println!();
-            successprint!(
-                "All tasks completed successfully"
-            );
+            successprint!("All tasks completed successfully");
             println!();
         }
         Ok(())
@@ -217,28 +245,13 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn printhelp(cmd: Cmd) {
-    infoprint!("{0} \t Info: {1}", cmd.name, cmd.desc);
-    print!("\t");
-    usagenb(&cmd.name);
-}
-
-fn printusetemplate() {
-    let ostype = std::env::consts::OS;
-    if ostype == "windows" {
-        infoprint!("Usage: unify [--version] [--help] <command> [arguments]");
-    } else if ostype == "linux" || ostype == "macos" {
-        infoprint!("Usage: unify [--version] [--help] <command> [arguments]");
-    }
-}
-
-pub fn help(argsv: Vec<String>) {
-    if check_arg_len(argsv.clone(), 1) {
+pub fn help() {
+    /*     if check_arg_len(argsv.clone(), 1) {
         usage_and_quit("help", "Invalid Arguments!")
     }
     if argsv.len() != 2 {
         usage("help");
-    }
+    } */
 
     print!("\t");
     println!(
@@ -247,11 +260,12 @@ pub fn help(argsv: Vec<String>) {
           • ┏
     ┓┏ ┏┓ ┓ ╋━━┓┏
     ┗┻━┛┗━┗━┛  ┗┫
-   By Dimension ┛ Version: {}
-                            
-    ", SELF_VERSION
+                ┛
+    Version: {}                      
+    ",
+        SELF_VERSION
     );
-    
+
     infoprint!("Unify is a project dependancy grabber");
     printusetemplate();
     println!();
@@ -265,10 +279,19 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
     if argsv.len() == 3 {
         let ufile_name: String = format!("{}.uni.yaml", &argsv[2]);
         infoprint!("Creating unifile: {}", ufile_name);
-        let mut plufile =
+        let mut ufile =
             File::create(ufile_name).expect("[!] Error encountered while creating file!");
-        plufile
-            .write_all(b"do: { \n \t echo hello world!\n }")
+        ufile
+            .write_all(b"
+project: {
+    name: '',
+    description: '',
+    version: '0.0.0',
+}
+do:
+    run:
+        - echo hello world
+")
             .expect("[!] Error while writing to file");
 
         return Ok("File Created!".to_string());
@@ -284,15 +307,14 @@ pub fn invalid_args_notify(args: Vec<String>) {
         args[1].red().bold(),
         "'".red().bold()
     );
-    eprintln!(
-        "Run 'unify help' to see available commands."
-    );
+    eprintln!("Run 'unify help' to see available commands.");
 }
 
-pub fn argparse(argsv: Vec<String>, pos: usize, item: &str) -> bool {
+pub fn argparse(argsv: Vec<String>, pos: usize, item_list: [&str; 4]) -> bool {
     // Parse arguments
-    let n_item = item.to_string();
-    if argsv.len() > 1 && argsv[pos] == n_item {
+    let x: String = argsv[pos].to_owned();
+    let x_str: &str = &x[..];
+    if item_list.contains(&x_str) {
         return true;
     } else {
         return false;
