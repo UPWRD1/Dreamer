@@ -1,6 +1,6 @@
 extern crate serde;
 extern crate serde_yaml;
-extern crate rand;
+//extern crate rand;
 
 use std::env::{self};
 use std::iter::*;

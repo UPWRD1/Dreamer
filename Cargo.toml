@@ -9,4 +9,4 @@ edition = "2021"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_yaml = { version = "0.9.25" }
 colored = "2"
-rand = "0.8.4"
+# rand = "0.8.4"

@@ -1,9 +1,9 @@
 extern crate colored;
 extern crate serde;
 extern crate serde_yaml;
-extern crate rand;
+//extern crate rand;
 
-use rand::prelude::*;
+//use rand::prelude::*;
 use colored::*;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -74,7 +74,7 @@ macro_rules! infoprint {
         println!("    {0}  {1}","[i]".blue().bold(), format_args!($($arg)*))
     }};
 }
-
+/*
 macro_rules! warnprint {
     () => {
         eprint!("\n")
@@ -92,13 +92,14 @@ macro_rules! questionprint {
         eprint!("    {0} {1}", "[?]".cyan().bold(), format_args!($($arg)*))
     }};
 }
+*/
 
 macro_rules! successprint {
     () => {
         eprint!("\n")
     };
     ($($arg:tt)*) => {{
-        eprint!("    {0} {1}", "[✓]".green().bold(), format_args!($($arg)*))
+        eprint!("    {0} {1}", "[✔]".green().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -183,7 +184,7 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
         let mut okcount: i32 = 0;
         let mut cmdcount: i32 = 0;
         // Execute commands in the 'run' section
-        let mut rng = thread_rng();
+        //let mut rng = thread_rng();
 
         infoprint!("Running '{}': \n", filepath);
         for command in config.r#do.run {
@@ -230,7 +231,6 @@ fn printusetemplate() {
         infoprint!("Usage: unify [--version] [--help] <command> [arguments]");
     }
 }
-
 
 pub fn help(argsv: Vec<String>) {
     if check_arg_len(argsv.clone(), 1) {
