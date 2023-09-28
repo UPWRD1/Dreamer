@@ -10,26 +10,27 @@ use helper::{argparse, help, init, invalid_args_notify, run, HELPCMD, INITCMD, R
 
 /*
 Error codes:
-0 OK
-1 File not found
-2 Could not read file
-3 Null Filename
-
+0000 OK
+0001 File not found
+0002 Could not read file
+0003 Invalid Arguments
+0004 Internal Error
 */
 
 pub fn cli() {
     // Main cli function
     let args: Vec<String> = env::args().collect(); // Argument collection
-                                                   // Parsi
+
+    //println!("{}", args.len()); // Parsi
 
     if args.clone().len() == 1 {
-        let _ = help();
+        help();
     } else if argparse(args.clone(), 1, INITCMD.aliases) {
         let _ = init(args); // Create new plufile
     } else if argparse(args.clone(), 1, RUNCMD.aliases) {
         let _ = run(args.clone()); // Run plufile
     } else if argparse(args.clone(), 1, HELPCMD.aliases) {
-        let _ = help(); //help
+        help(); //help
     } else {
         invalid_args_notify(args);
     }
