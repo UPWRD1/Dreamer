@@ -6,7 +6,10 @@ use std::env::{self};
 use std::iter::*;
 
 mod helper;
-use helper::{argparse, help, init, invalid_args_notify, run, HELPCMD, INITCMD, RUNCMD};
+use helper::{
+    argparse, help, init, invalid_args_notify, run, HELPCMD, INITCMD, RUNCMD,
+};
+
 
 /*
 Error codes:
@@ -22,7 +25,6 @@ pub fn cli() {
     let args: Vec<String> = env::args().collect(); // Argument collection
 
     //println!("{}", args.len()); // Parsi
-
     if args.clone().len() == 1 {
         help();
     } else if argparse(args.clone(), 1, INITCMD.aliases) {

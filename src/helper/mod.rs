@@ -3,16 +3,17 @@ extern crate serde;
 extern crate serde_yaml;
 //extern crate rand;
 
+#[macro_use]
+mod resource;
+use crate::helper::resource::{throw_fatal, printusage, printusagenb, printusetemplate, printhelp, usage_and_quit, option_list, check_arg_len};
+
 //use rand::prelude::*;
-use colored::*;
 use serde::{Deserialize, Serialize};
 //use std::array;
 use std::error::Error;
-use std::fmt::Arguments;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::Write;
-use std::io::{self, BufRead};
 use std::iter::*;
 use std::path::Path;
 use std::process::Command;
@@ -65,91 +66,6 @@ pub const INITCMD: Cmd = Cmd {
     aliases: ["init", "i", "--init", "-i"],
 };
 
-macro_rules! errprint {
-    () => {
-        eprint!("\n")
-    };
-    ($($arg:tt)*) => {{
-        eprintln!("    {0}  {1}","[!]".red().bold(), format_args!($($arg)*))
-    }};
-}
-
-macro_rules! infoprint {
-    () => {
-        print!("\n")
-    };
-    ($($arg:tt)*) => {{
-        println!("    {0}  {1}","[i]".blue().bold(), format_args!($($arg)*))
-    }};
-}
-/*
-macro_rules! warnprint {
-    () => {
-        eprint!("\n")
-    };
-    ($($arg:tt)*) => {{
-        eprint!("    {0}  {1}", "[W]".yellow().bold(), format_args!($($arg)*))
-    }};
-}
-
-macro_rules! questionprint {
-    () => {
-        eprint!("\n")
-    };
-    ($($arg:tt)*) => {{
-        eprint!("    {0} {1}", "[?]".cyan().bold(), format_args!($($arg)*))
-    }};
-}
-*/
-
-pub fn read_line_expect<B: BufRead>(src: &mut B) -> io::Result<String> {
-    src.lines().next().map_or(
-        Err(io::Error::new(
-            io::ErrorKind::UnexpectedEof,
-            "Input BufRead reached EOF before".to_string(),
-        )),
-        |line| line,
-    )
-}
-
-pub fn input_fmt<B: BufRead, W: Write>(
-    src: &mut B,
-    dst: &mut W,
-    fmt: Arguments,
-) -> io::Result<String> {
-    dst.write_fmt(fmt)?;
-    dst.flush()?;
-    read_line_expect(src)
-}
-
-macro_rules! input {
-    () => {
-        (read_line_expect(&mut std::io::stdin().lock()).unwrap())
-    };
-
-    ($($arg:tt)*) => {
-        (input_fmt(&mut std::io::stdin().lock(), &mut std::io::stdout(), format_args!($($arg)*)).unwrap())
-    };
-}
-
-macro_rules! successprint {
-    () => {
-        eprint!("\n")
-    };
-    ($($arg:tt)*) => {{
-        eprint!("    {0} {1}", "[✔]".green().bold(), format_args!($($arg)*))
-    }};
-}
-
-fn printusage(msg: &str) {
-    let ostype = std::env::consts::OS;
-    if ostype == "windows" {
-        infoprint!("Usage: {0}{1}", " ./unify ".black(), msg.black());
-    } else if ostype == "linux" || ostype == "macos" {
-        infoprint!("Usage: {0} {1}", " unify ".black(), msg.black());
-    }
-}
-
 fn usage(cmd: &str) {
     match cmd {
         "help" => {
@@ -161,22 +77,9 @@ fn usage(cmd: &str) {
         "init" => {
             printusage(INITCMD.desc);
         }
-        &_ => errprint!(
-            "{}",
-            "FATAL ERROR: Invalid command.
-        If you somehow see this, you probably need to reinstall unify, like now."
-                .red()
-                .bold()
-        ),
-    }
-}
-
-fn printusagenb(msg: &str) {
-    let ostype = std::env::consts::OS;
-    if ostype == "windows" {
-        println!("\t Usage: {0}{1}", " ./unify ".black(), msg.black());
-    } else if ostype == "linux" || ostype == "macos" {
-        println!("\t Usage: {0} {1}", " unify ".black(), msg.black());
+        &_ => {
+            throw_fatal("Invalid command");
+        }
     }
 }
 
@@ -198,31 +101,6 @@ fn usagenb(cmd: &str) {
                 .red()
                 .bold()
         ),
-    }
-}
-
-fn check_arg_len(argsv: Vec<String>, lentocheck: usize) -> bool {
-    argsv.len() == lentocheck
-}
-
-fn usage_and_quit(cmd: &str, msg: &str) {
-    errprint!("{}", msg);
-    usage(cmd);
-    std::process::exit(0);
-}
-
-fn printhelp(cmd: Cmd) {
-    infoprint!("{0} \t Info: {1}", cmd.name, cmd.desc);
-    print!("\t");
-    usagenb(cmd.name);
-}
-
-fn printusetemplate() {
-    let ostype = std::env::consts::OS;
-    if ostype == "windows" {
-        infoprint!("Usage: ./unify [--version] [--help] <command> [arguments]");
-    } else if ostype == "linux" || ostype == "macos" {
-        infoprint!("Usage: unify [--version] [--help] <command> [arguments]");
     }
 }
 
@@ -322,7 +200,7 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
 
         if Path::new(ufile_name_str).exists() {
             errprint!("File {} already Exists!", ufile_name);
-            match input!("Do you want to continue? (Y/N)").as_str() {
+            match questionprint!("Do you want to continue? (Y/N)").as_str() {
                 "y" | "Y" => {
                     let _ = createfile(ufile_name);
                     Ok("OK".to_string())
