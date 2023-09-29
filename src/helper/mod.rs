@@ -1,11 +1,12 @@
 extern crate colored;
+use crate::helper::colored::Colorize;
 extern crate serde;
 extern crate serde_yaml;
 //extern crate rand;
 
 #[macro_use]
 mod resource;
-use crate::helper::resource::{throw_fatal, printusage, printusagenb, printusetemplate, printhelp, usage_and_quit, option_list, check_arg_len};
+use crate::helper::resource::{throw_fatal, printusage, printusagenb, printusetemplate, printhelp, usage_and_quit, check_arg_len, input_fmt};
 
 //use rand::prelude::*;
 use serde::{Deserialize, Serialize};

@@ -1,6 +1,9 @@
 extern crate colored;
 
-use crate::helper::colored::Colorize;
+
+use crate::helper::usage;
+use crate::helper::usagenb;
+use colored::Colorize;
 use crate::helper::Cmd;
 use std::io;
 use std::io::BufRead;
@@ -25,7 +28,7 @@ macro_rules! infoprint {
         println!("    {0}  {1}","[i]".blue().bold(), format_args!($($arg)*))
     }};
 }
-
+/*
 macro_rules! warnprint {
     () => {
         eprint!("\n")
@@ -34,6 +37,7 @@ macro_rules! warnprint {
         eprint!("    {0}  {1}", "[W]".yellow().bold(), format_args!($($arg)*))
     }};
 }
+*/
 
 macro_rules! successprint {
     () => {
@@ -118,7 +122,7 @@ pub fn usage_and_quit(cmd: &str, msg: &str) {
     usage(cmd);
     std::process::exit(0);
 }
-
+/*
 pub fn option_list(kind: &str, opts: Vec<&str>, msg: &str) -> std::string::String {
     match kind {
         "err" => {
@@ -139,6 +143,7 @@ pub fn option_list(kind: &str, opts: Vec<&str>, msg: &str) -> std::string::Strin
     }
     questionprint!("==> ")
 }
+*/
 
 pub fn printhelp(cmd: Cmd) {
     infoprint!("{0} \t Info: {1}", cmd.name, cmd.desc);
