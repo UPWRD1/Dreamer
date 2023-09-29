@@ -1,5 +1,5 @@
+/// Misc Helper functions for UI and other things.
 extern crate colored;
-
 
 use crate::helper::usage;
 use crate::helper::usagenb;
@@ -86,6 +86,11 @@ macro_rules! questionprint {
         input!("    {0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
     }};
 }
+/* x
+macro_rules! vec_of_strings {
+    ($($x:expr),*) => (vec![$($x.to_string()),*]);
+}
+*/
 
 pub fn throw_fatal(msg: &str) {
     errprint!(

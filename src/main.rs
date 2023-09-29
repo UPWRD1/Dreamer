@@ -1,3 +1,5 @@
+/// Main code.
+
 extern crate serde;
 extern crate serde_yaml;
 //extern crate rand;
@@ -7,9 +9,14 @@ use std::iter::*;
 
 mod helper;
 use helper::{
-    argparse, help, init, invalid_args_notify, run, HELPCMD, INITCMD, RUNCMD,
+    argparse, help, init, invalid_args_notify, run,
 };
 
+use helper::refs::{
+    INITCMD,
+    RUNCMD,
+    HELPCMD,
+};
 
 /*
 Error codes:
