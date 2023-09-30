@@ -1,0 +1,12 @@
+project: {
+  name: "",
+  description: "",
+  version: "0.0.0",
+}
+
+do:
+  run:
+    - echo hello world
+    - echo this is a test
+    - echo this is a test
+  

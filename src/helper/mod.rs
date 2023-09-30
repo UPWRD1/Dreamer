@@ -118,7 +118,6 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
         let mut okcount: i32 = 0;
         let mut cmdcount: i32 = 0;
         // Execute commands in the 'run' section
-
         infoprint!("Running '{}': \n", filepath);
         for command in config.r#do.run {
             cmdcount += 1;
@@ -138,7 +137,9 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
 
         if cmdcount == okcount {
             println!();
-            successprint!("All tasks completed successfully");
+            successprint!(
+                "All tasks completed successfully"
+            );
             println!();
         }
         Ok(())
