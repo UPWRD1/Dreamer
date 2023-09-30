@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
-//use std::io::*;
 use std::io::Write;
 use std::iter::*;
 use std::process::Command;
@@ -92,6 +91,15 @@ macro_rules! questionprint {
     }};
 }
 
+macro_rules! successprint {
+    () => {
+        eprint!("\n")
+    };
+    ($($arg:tt)*) => {{
+        eprint!("    {0} {1}", "[✓]".green().bold(), format_args!($($arg)*))
+    }};
+}
+
 pub fn printusage(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
@@ -163,7 +171,7 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     // Read the .plu.yaml file
     let index_to_open = 2;
     if index_to_open < argsv.len() {
-        let filepath = argsv[index_to_open].to_string().to_owned() + &".uni.yaml".to_string();
+        let filepath = argsv[index_to_open].to_string().to_owned() + &".uni.yml".to_string();
         let file = File::open(filepath.clone())?;
         let reader = BufReader::new(file);
 
@@ -173,7 +181,7 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
         let mut okcount: i32 = 0;
         let mut cmdcount: i32 = 0;
         // Execute commands in the 'run' section
-        infoprint!("Executing '{}' \n", filepath);
+        infoprint!("Running '{}': \n", filepath);
         for command in config.r#do.run {
             cmdcount += 1;
             let mut parts = command.split_whitespace();
@@ -191,9 +199,11 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
         }
 
         if cmdcount == okcount {
-            infoprint!(
-                "\n All tasks completed successfully"
+            println!();
+            successprint!(
+                "All tasks completed successfully"
             );
+            println!();
         }
         Ok(())
     } else {
