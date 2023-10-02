@@ -44,3 +44,4 @@ pub const INITCMD: Cmd = Cmd {
     usage: "init <filename>",
     aliases: ["init", "i", "--init", "-i"],
 };
+
