@@ -20,8 +20,6 @@ macro_rules! errprint {
     }};
 }
 
-
-
 macro_rules! infoprint {
     () => {
         print!("\n")

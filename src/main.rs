@@ -33,7 +33,7 @@ pub fn cli() {
     let args: Vec<String> = env::args().collect(); // Argument collection
     //println!("{}", args.len()); // Parsi
     if args.clone().len() == 1 {
-        help();
+        //help();
         init_shell();
     } else if argparse(args.clone(), 1, INITCMD.aliases) {
         let _ = init(args); // Create new plufile

@@ -7,20 +7,23 @@ extern crate serde_yaml;
 #[macro_use]
 mod resource;
 pub mod shell;
-use crate::helper::resource::{throw_fatal, printusage, printusagenb, printusetemplate, printhelp, usage_and_quit, check_arg_len, input_fmt};
+use crate::helper::resource::{
+    check_arg_len, input_fmt, printhelp, printusage, printusagenb, printusetemplate, throw_fatal,
+    usage_and_quit,
+};
 
 pub(crate) mod refs;
 use crate::helper::refs::*;
 
 use serde::{Deserialize, Serialize};
+//use std::env;
 use std::error::Error;
+//use std::fs::metadata;
 use std::fs::File;
-use std::fs::metadata;
 use std::io::BufReader;
 use std::io::Write;
 use std::iter::*;
 use std::path::Path;
-use std::env;
 use std::process::Command;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
@@ -139,21 +142,28 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
             let mut parts = command.split_whitespace();
             let program = parts.next().ok_or("Missing command")?;
             let args: Vec<&str> = parts.collect();
-            let status = Command::new(program).args(args).status()?;
-
-            if status.success() {
-                infoprint!("Command '{}' executed successfully", command);
-                okcount += 1;
+            if cfg!(target_os = "windows") {
+                let status = Command::new(program).args(args).status()?;
+                if status.success() {
+                    infoprint!("Command '{}' executed successfully", command);
+                    okcount += 1;
+                } else {
+                    errprint!("Error executing command: '{}'", command);
+                }
             } else {
-                errprint!("Error executing command: '{}'", command);
+                let status = Command::new(program).args(args).status()?;
+                if status.success() {
+                    infoprint!("Command '{}' executed successfully", command);
+                    okcount += 1;
+                } else {
+                    errprint!("Error executing command: '{}'", command);
+                }
             }
         }
 
         if cmdcount == okcount {
             println!();
-            successprint!(
-                "All tasks completed successfully"
-            );
+            successprint!("All tasks completed successfully");
             println!();
         }
         Ok(())
@@ -213,18 +223,18 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
         Err("Invalid Arguments!".to_string())
     }
 }
-
+/*
 pub fn load(argsv: Vec<String>) {
     let curr_dir = env::current_dir();
     let ext: &'static str = ".uni.yml";
     let path = concat!("unify", ".uni.yml");
     match metadata(path) {
-        _ if path.starts_with("/") && path.ends_with(".uni.yaml") => println!("File exists"),
+        _ if path.starts_with('/') && path.ends_with(".uni.yaml") => println!("File exists"),
         Ok(_) => println!("File exists!"),
         Err(_) => println!("File does not exist!"),
     }
 }
-
+*/
 pub fn invalid_args_notify(args: Vec<String>) {
     errprint!(
         "{0}{1}{2}",
