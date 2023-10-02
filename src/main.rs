@@ -9,7 +9,7 @@ use std::iter::*;
 
 mod helper;
 use helper::{
-    argparse, help, init, invalid_args_notify, run,
+    argparse, help, init, invalid_args_notify, run, load,
 };
 
 use helper::refs::{
@@ -32,9 +32,14 @@ pub fn cli() {
     // Main cli function
     let args: Vec<String> = env::args().collect(); // Argument collection
     //println!("{}", args.len()); // Parsi
+
+    match args[1] {
+        _ if INITCMD.aliases => {init(args);} // Create new plufile
+    }
+
     if args.clone().len() == 1 {
         //help();
-        init_shell();
+        init_shell()
     } else if argparse(args.clone(), 1, INITCMD.aliases) {
         let _ = init(args); // Create new plufile
     } else if argparse(args.clone(), 1, RUNCMD.aliases) {

@@ -26,6 +26,8 @@ use std::iter::*;
 use std::path::Path;
 use std::process::Command;
 
+use self::shell::init_shell;
+
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -223,18 +225,16 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
         Err("Invalid Arguments!".to_string())
     }
 }
-/*
+
 pub fn load(argsv: Vec<String>) {
-    let curr_dir = env::current_dir();
-    let ext: &'static str = ".uni.yml";
-    let path = concat!("unify", ".uni.yml");
-    match metadata(path) {
-        _ if path.starts_with('/') && path.ends_with(".uni.yaml") => println!("File exists"),
-        Ok(_) => println!("File exists!"),
-        Err(_) => println!("File does not exist!"),
+    match run(argsv) {
+        Err(_) => { errprint!("Error loading file")}
+        Ok(()) => {
+            init_shell()
+        }
     }
 }
-*/
+
 pub fn invalid_args_notify(args: Vec<String>) {
     errprint!(
         "{0}{1}{2}",
@@ -245,9 +245,9 @@ pub fn invalid_args_notify(args: Vec<String>) {
     eprintln!("Run 'unify help' to see available commands.");
 }
 
-pub fn argparse(argsv: Vec<String>, pos: usize, item_list: [&str; 4]) -> bool {
+pub fn argparse(argsv: Vec<String>, pos: usize) -> bool {
     // Parse arguments
     let x: String = argsv[pos].to_owned();
     let x_str: &str = &x[..];
-    item_list.contains(&x_str)
+    return argsv[pos] == x_str;
 }
