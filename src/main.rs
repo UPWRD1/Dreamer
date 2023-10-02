@@ -18,6 +18,7 @@ use helper::refs::{
     HELPCMD,
 };
 
+use helper::shell:: init_shell;
 /*
 Error codes:
 0000 OK
@@ -30,10 +31,10 @@ Error codes:
 pub fn cli() {
     // Main cli function
     let args: Vec<String> = env::args().collect(); // Argument collection
-
     //println!("{}", args.len()); // Parsi
     if args.clone().len() == 1 {
         help();
+        init_shell();
     } else if argparse(args.clone(), 1, INITCMD.aliases) {
         let _ = init(args); // Create new plufile
     } else if argparse(args.clone(), 1, RUNCMD.aliases) {

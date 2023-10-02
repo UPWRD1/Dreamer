@@ -3,25 +3,24 @@ extern crate colored;
 use crate::helper::colored::Colorize;
 extern crate serde;
 extern crate serde_yaml;
-//extern crate rand;
 
 #[macro_use]
 mod resource;
-mod shell;
+pub mod shell;
 use crate::helper::resource::{throw_fatal, printusage, printusagenb, printusetemplate, printhelp, usage_and_quit, check_arg_len, input_fmt};
 
 pub(crate) mod refs;
 use crate::helper::refs::*;
 
-//use rand::prelude::*;
 use serde::{Deserialize, Serialize};
-//use std::array;
 use std::error::Error;
 use std::fs::File;
+use std::fs::metadata;
 use std::io::BufReader;
 use std::io::Write;
 use std::iter::*;
 use std::path::Path;
+use std::env;
 use std::process::Command;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
@@ -34,6 +33,17 @@ pub struct ProjectConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Tool {
+    name: String,
+    link: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DepsConfig {
+    tools: Vec<Tool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RunConfig {
     run: Vec<String>,
 }
@@ -41,6 +51,7 @@ pub struct RunConfig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UniConfig {
     project: ProjectConfig,
+    deps: DepsConfig,
     r#do: RunConfig,
 }
 
@@ -87,14 +98,18 @@ fn createfile(ufile_name: String) -> Result<std::string::String, std::string::St
     let mut ufile = File::create(ufile_name).expect("[!] Error encountered while creating file!");
     ufile
         .write_all(
-            b"project: {
-    name: '',
-    description: '',
-    version: '0.0.0',
-}
-do:
-    run:
-        - echo hello world
+            br"project: {
+                name: ,
+                description: ,
+                version: 0.0.0,
+              }
+              
+              do:
+                run:
+                  - echo hello world
+                  - echo this is a test
+                  - echo this is a test
+                
 ",
         )
         .expect("[!] Error while writing to file");
@@ -125,7 +140,6 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
             let program = parts.next().ok_or("Missing command")?;
             let args: Vec<&str> = parts.collect();
             let status = Command::new(program).args(args).status()?;
-            infoprint!("test");
 
             if status.success() {
                 infoprint!("Command '{}' executed successfully", command);
@@ -197,6 +211,17 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
     } else {
         usage_and_quit(INITCMD.name, "Invalid arguments!");
         Err("Invalid Arguments!".to_string())
+    }
+}
+
+pub fn load(argsv: Vec<String>) {
+    let curr_dir = env::current_dir();
+    let ext: &'static str = ".uni.yml";
+    let path = concat!("unify", ".uni.yml");
+    match metadata(path) {
+        _ if path.starts_with("/") && path.ends_with(".uni.yaml") => println!("File exists"),
+        Ok(_) => println!("File exists!"),
+        Err(_) => println!("File does not exist!"),
     }
 }
 
