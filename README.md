@@ -1,13 +1,20 @@
 # Unify 🔄
 > Does what you want, not what you say.
 
-Unify is a universal package and project management system for any language,
-any build system, and any framework. Here's how:
+Unify is a universal tool management system for any language,
+any build system, and any framework. 
 
+## Here's how:
+
+* Lightning Fast project creation:
 ```console
-$ unify init myProject --python
+$ unify init myProject
     [i] Creating new project 'myProject' with python template...
+    [i] Done!
+```
 
+* Work with your favorite tools without version conflicts:
+```console
 $ unify add myTool
     [!] Tool 'myTool' has multiple versions!
     [?] Choose a version:
@@ -16,20 +23,16 @@ $ unify add myTool
         3: myTool 1.0.0 
     ==> 1
     [i] Installing tool 'myTool' (6.3.2)...
+```
 
-$ unify archive myProject
-    [i] Archive file 'myProject.ark' created!
-
-$ unify build myProject
-    [i] Build file 'myProject.uni.yaml' created!
-
-# On another machine:
+* New computer? No problem:
+```console
 $ git clone myProject
 
 $ unify
     [?] Project 'myProject' requires the following tools:
         - myTool
-        - python
+        - otherTool
         Would you like to install these? (y/n)
     ==> y
     [i] Installing...
