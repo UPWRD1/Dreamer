@@ -20,6 +20,8 @@ macro_rules! errprint {
     }};
 }
 
+
+
 macro_rules! infoprint {
     () => {
         print!("\n")
@@ -84,6 +86,15 @@ macro_rules! questionprint {
     };
     ($($arg:tt)*) => {{
         input!("    {0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
+    }};
+}
+
+macro_rules! shellprint {
+    () => {
+        input!()
+    };
+    ($($arg:tt)*) => {{
+        input!("    {0} {1} ", "[>]".yellow().bold(), format_args!($($arg)*))
     }};
 }
 /* x

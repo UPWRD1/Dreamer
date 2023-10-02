@@ -4,6 +4,25 @@ pub struct Cmd<'a> {
     pub usage: &'a str,
     pub aliases: [&'a str; 4],
 }
+/*
+impl Cmd<'_> {
+    fn get_name(&self) -> &str {
+        self.name
+    }
+
+    fn get_desc(&self) -> &str {
+        self.desc
+    }
+
+    fn get_usage(&self) -> &str {
+        self.usage
+    }
+
+    fn get_aliases(&self) -> [&str; 4] {
+        self.aliases
+    }
+}
+*/
 
 pub const RUNCMD: Cmd = Cmd {
     name: "run",
