@@ -92,7 +92,7 @@ macro_rules! shellprint {
         input!()
     };
     ($($arg:tt)*) => {{
-        input!("    {0} {1} ", "[>]".yellow().bold(), format_args!($($arg)*))
+        print!("    {0} {1} ", "[>]".yellow().bold(), format_args!($($arg)*))
     }};
 }
 /* x
@@ -159,6 +159,9 @@ pub fn option_list(kind: &str, opts: Vec<&str>, msg: &str) -> std::string::Strin
 }
 */
 
+pub fn quit() {
+    std::process::exit(0);
+}
 pub fn printhelp(cmd: Cmd) {
     infoprint!("{0} \t Info: {1}", cmd.name, cmd.desc);
     print!("\t");
