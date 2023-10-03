@@ -1,77 +1,134 @@
-use std::ffi::{CStr, c_char};
+//use super::resource::throw_fatal;
+use crate::helper::colored::Colorize;
+//use crate::helper::input_fmt;
+use std::{
+    env::{self},
+    path::Path,
+    //str::SplitWhitespace,
+    process::Child,
+    process::{Command, Stdio},
+    io::{stdout, Write, stdin},
+};
 
-use super::resource::throw_fatal;
+use super::resource::quit;
 
-const UNISH_BUFSIZE: usize = 64;
-const UNISH_TOK_DELIM: char = ' ';
+//pub const WINCMDS: [&str; 4] = ["help", "ls", "cat", "clear"];
+/*
+fn unish_exec(command: &str, args: SplitWhitespace<'_>, previous_cmd: &mut Option<Child>, commands: &mut std::iter::Peekable<std::str::Split<'_, &str>>) {
 
-/* const UNISH_TOK_DELIM: Vec<String> = vec_of_strings![
-    "\t",
-    "\r",
-    "\n",
-    " "
-];
+    let stdin = previous_cmd
+    .map_or(Stdio::inherit(), |output: Child| { Stdio::from(output.stdout.unwrap())});
+
+    let stdout = if commands.peek().is_some() {
+        Stdio::piped()
+    } else {
+        Stdio::inherit()
+    };
+
+    let output = Command::new(command)
+    .args(args)
+    .stdin(stdin)
+    .stdout(stdout)
+    .spawn();
+
+    match output {
+        Ok(output) => { *previous_cmd = Some(output);},
+        Err(e) => {
+            let previous_cmd: &mut Option<Child> = &mut None;
+            errprint!("{}", e); }
+    }
+
+}
+
+fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: &mut Option<Child>, commands: &mut std::iter::Peekable<std::str::Split<'_, &str>>) {
+
+    match command {
+        "cd" => {
+            let new_dir = &args.peekable().peek().map_or("/", |x| *x);
+            let root = Path::new(new_dir);
+            if let Err(e) = env::set_current_dir(root) {
+                errprint!("{}", e);
+            }
+        },
+        "exit" => { quit(); },
+
+        "clear" | "cls" => print!("\x1B[2J\x1B[1;1H"),
+
+        &_ => {
+            unish_exec(command, args, previous_cmd, commands);
+    }
+}
+}
 */
 
-pub fn strtok<'a>(string: &'_ mut &'a str, delimiter: char) -> &'a str {
-    if let Some(i) = string.find(delimiter) {
-      let prefix = &string[..i];
-      let suffix = &string[(i + delimiter.len_utf8())..];
-      *string = suffix;
-      prefix
-    } else {
-      let prefix = *string;
-      *string = "";
-      prefix
-    }
-  }
+fn unish_loop() {
+    loop {
+        let curr_dir = env::current_dir();
+        shellprint!("(~{}) [unify] @> ", curr_dir.unwrap().to_string_lossy());
+        stdout().flush().unwrap();
 
-fn unish_splitln<'a>(line: &mut &str) -> Vec<char> {
-    let mut bufsize: usize = UNISH_BUFSIZE;
-    let mut position: usize = 0;
-    let mut tokens: Vec<char>;
-    let mut token: &char;
-    // let mut tokens_backup: Vec<char>;
+        let mut input = String::new();
+        stdin().read_line(&mut input).unwrap();
 
-    if tokens.is_empty() {
-        throw_fatal("Allocation Error");
-    }
+        let mut commands = input.trim().split(" | ").peekable();
+        let mut previous_cmd = None;
 
-    token = strtok(line, UNISH_TOK_DELIM);
-    while !tokens.is_empty() {
-        tokens[position] = *token;
-        position += 1;
-        
-        if position >= bufsize {
-            bufsize += UNISH_BUFSIZE;
-            let mut tokens_backup = tokens;
-            if tokens[position] == '\0' {
-                throw_fatal("Allocation Error");
+        while let Some(command) = commands.next() {
+            let mut parts = command.trim().split_whitespace(); //.map(str::to_string).collect();
+            let command = parts.next().unwrap();
+            let args = parts;
+            //unish_check_builtin(command, args, previous_cmd, commands);
+            match command {
+                "cd" => {
+                    let new_dir = &args.peekable().peek().map_or("/", |x| *x);
+                    let root = Path::new(new_dir);
+                    if let Err(e) = env::set_current_dir(root) {
+                        errprint!("{}", e);
+                    }
+                }
+                "exit" => {
+                    quit();
+                }
+
+                "clear" | "cls" => print!("\x1B[2J\x1B[1;1H"),
+
+                command => {
+                    //unish_exec(command, args, previous_cmd, commands);
+                    let stdin = previous_cmd.map_or(Stdio::inherit(), |output: Child| {
+                        Stdio::from(output.stdout.unwrap())
+                    });
+
+                    let stdout = if commands.peek().is_some() {
+                        Stdio::piped()
+                    } else {
+                        Stdio::inherit()
+                    };
+
+                    let output = Command::new(command)
+                        .args(args)
+                        .stdin(stdin)
+                        .stdout(stdout)
+                        .spawn();
+
+                    match output {
+                        Ok(output) => {
+                            previous_cmd = Some(output);
+                        }
+                        Err(e) => {
+                            previous_cmd = None;
+                            errprint!("{}", e);
+                        }
+                    }
+                }
             }
         }
-        //token = strtok(&mut empty, UNISH_TOK_DELIM);
-    }
-
-    tokens[position] = '\0';
-    return tokens
-
-}
-
-fn unish_loop() {
-    let mut line: &mut &str;
-    let mut args: Vec<char>;
-    let mut status: bool;
-
-    while status {
-        //todo!();
-
-        //line = unish_readln();
-        args = unish_splitln(line);
-        //status = unish_exec(args);
-
+        if let Some(mut final_command) = previous_cmd {
+            // block until the final command has finished
+            final_command.wait().unwrap();
+        }
     }
 }
 
-fn init_shell() {
+pub fn init_shell() {
     unish_loop();
 }

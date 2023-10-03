@@ -3,26 +3,30 @@ extern crate colored;
 use crate::helper::colored::Colorize;
 extern crate serde;
 extern crate serde_yaml;
-//extern crate rand;
 
 #[macro_use]
 mod resource;
-mod shell;
-use crate::helper::resource::{throw_fatal, printusage, printusagenb, printusetemplate, printhelp, usage_and_quit, check_arg_len, input_fmt};
+pub mod shell;
+use crate::helper::resource::{
+    check_arg_len, input_fmt, printhelp, printusage, printusagenb, printusetemplate, throw_fatal,
+    usage_and_quit,
+};
 
 pub(crate) mod refs;
 use crate::helper::refs::*;
 
-//use rand::prelude::*;
 use serde::{Deserialize, Serialize};
-//use std::array;
+//use std::env;
 use std::error::Error;
+//use std::fs::metadata;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::Write;
 use std::iter::*;
 use std::path::Path;
 use std::process::Command;
+
+use self::shell::init_shell;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
@@ -34,6 +38,17 @@ pub struct ProjectConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Tool {
+    name: String,
+    link: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DepsConfig {
+    tools: Vec<Tool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RunConfig {
     run: Vec<String>,
 }
@@ -41,6 +56,7 @@ pub struct RunConfig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UniConfig {
     project: ProjectConfig,
+    deps: DepsConfig,
     r#do: RunConfig,
 }
 
@@ -87,14 +103,18 @@ fn createfile(ufile_name: String) -> Result<std::string::String, std::string::St
     let mut ufile = File::create(ufile_name).expect("[!] Error encountered while creating file!");
     ufile
         .write_all(
-            b"project: {
-    name: '',
-    description: '',
-    version: '0.0.0',
-}
-do:
-    run:
-        - echo hello world
+            br"project: {
+                name: ,
+                description: ,
+                version: 0.0.0,
+              }
+              
+              do:
+                run:
+                  - echo hello world
+                  - echo this is a test
+                  - echo this is a test
+                
 ",
         )
         .expect("[!] Error while writing to file");
@@ -124,22 +144,28 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
             let mut parts = command.split_whitespace();
             let program = parts.next().ok_or("Missing command")?;
             let args: Vec<&str> = parts.collect();
-            let status = Command::new(program).args(args).status()?;
-            infoprint!("test");
-
-            if status.success() {
-                infoprint!("Command '{}' executed successfully", command);
-                okcount += 1;
+            if cfg!(target_os = "windows") {
+                let status = Command::new(program).args(args).status()?;
+                if status.success() {
+                    infoprint!("Command '{}' executed successfully", command);
+                    okcount += 1;
+                } else {
+                    errprint!("Error executing command: '{}'", command);
+                }
             } else {
-                errprint!("Error executing command: '{}'", command);
+                let status = Command::new(program).args(args).status()?;
+                if status.success() {
+                    infoprint!("Command '{}' executed successfully", command);
+                    okcount += 1;
+                } else {
+                    errprint!("Error executing command: '{}'", command);
+                }
             }
         }
 
         if cmdcount == okcount {
             println!();
-            successprint!(
-                "All tasks completed successfully"
-            );
+            successprint!("All tasks completed successfully");
             println!();
         }
         Ok(())
@@ -200,6 +226,15 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
     }
 }
 
+pub fn load(argsv: Vec<String>) {
+    match run(argsv) {
+        Err(_) => {
+            errprint!("Error loading file")
+        }
+        Ok(()) => init_shell(),
+    }
+}
+
 pub fn invalid_args_notify(args: Vec<String>) {
     errprint!(
         "{0}{1}{2}",
@@ -207,12 +242,10 @@ pub fn invalid_args_notify(args: Vec<String>) {
         args[1].red().bold(),
         "'".red().bold()
     );
-    eprintln!("Run 'unify help' to see available commands.");
+    infoprint!("Run 'unify help' to see available commands.");
 }
 
-pub fn argparse(argsv: Vec<String>, pos: usize, item_list: [&str; 4]) -> bool {
+pub fn argparse(argsv: &Vec<String>, pos: usize, cmd: Cmd) -> bool {
     // Parse arguments
-    let x: String = argsv[pos].to_owned();
-    let x_str: &str = &x[..];
-    item_list.contains(&x_str)
+    cmd.aliases.contains(&argsv[pos].as_str())
 }
