@@ -228,10 +228,10 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
 
 pub fn load(argsv: Vec<String>) {
     match run(argsv) {
-        Err(_) => { errprint!("Error loading file")}
-        Ok(()) => {
-            init_shell()
+        Err(_) => {
+            errprint!("Error loading file")
         }
+        Ok(()) => init_shell(),
     }
 }
 
@@ -242,12 +242,10 @@ pub fn invalid_args_notify(args: Vec<String>) {
         args[1].red().bold(),
         "'".red().bold()
     );
-    eprintln!("Run 'unify help' to see available commands.");
+    infoprint!("Run 'unify help' to see available commands.");
 }
 
-pub fn argparse(argsv: Vec<String>, pos: usize) -> bool {
+pub fn argparse(argsv: &Vec<String>, pos: usize, cmd: Cmd) -> bool {
     // Parse arguments
-    let x: String = argsv[pos].to_owned();
-    let x_str: &str = &x[..];
-    return argsv[pos] == x_str;
+    cmd.aliases.contains(&argsv[pos].as_str())
 }

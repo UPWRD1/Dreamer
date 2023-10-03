@@ -26,3 +26,9 @@ pub const INITCMD: Cmd = Cmd {
     aliases: ["init", "i", "--init", "-i"],
 };
 
+pub const LOADCMD: Cmd = Cmd {
+    name: "load",
+    desc: "Load a .uni.yaml file",
+    usage: "load [filename]",
+    aliases: ["load", "l", "--load", "-l"],
+};

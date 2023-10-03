@@ -1,5 +1,4 @@
 /// Main code.
-
 extern crate serde;
 extern crate serde_yaml;
 //extern crate rand;
@@ -8,17 +7,11 @@ use std::env::{self};
 use std::iter::*;
 
 mod helper;
-use helper::{
-    argparse, help, init, invalid_args_notify, run, load,
-};
+use helper::{argparse, help, init, invalid_args_notify, load, run};
 
-use helper::refs::{
-    INITCMD,
-    RUNCMD,
-    HELPCMD,
-};
+use helper::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
 
-use helper::shell:: init_shell;
+use helper::shell::init_shell;
 /*
 Error codes:
 0000 OK
@@ -31,12 +24,30 @@ Error codes:
 pub fn cli() {
     // Main cli function
     let args: Vec<String> = env::args().collect(); // Argument collection
-    //println!("{}", args.len()); // Parsi
+                                                   //println!("{}", args.len()); // Parsi
 
-    match args[1] {
-        _ if INITCMD.aliases => {init(args);} // Create new plufile
+    if args.clone().len() == 1 {
+        //help();
+        init_shell()
+    } else {
+        match args[1] {
+            _ if argparse(&args, 1, INITCMD) => {
+                let _ = init(args);
+            }
+            _ if argparse(&args, 1, RUNCMD) => {
+                let _ = run(args);
+            }
+            _ if argparse(&args, 1, HELPCMD) => {
+                help();
+            }
+            _ if argparse(&args, 1, LOADCMD) => {
+                load(args);
+            }
+            _ => invalid_args_notify(args), // Create new plufile
+        }
     }
 
+    /*
     if args.clone().len() == 1 {
         //help();
         init_shell()
@@ -49,6 +60,7 @@ pub fn cli() {
     } else {
         invalid_args_notify(args);
     }
+    */
 }
 
 fn main() {
