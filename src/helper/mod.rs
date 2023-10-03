@@ -1,212 +1,171 @@
+/// Primary Parsing and Logic Functions.
 extern crate colored;
+use crate::helper::colored::Colorize;
 extern crate serde;
 extern crate serde_yaml;
-extern crate rand;
 
-use rand::prelude::*;
-use colored::*;
+#[macro_use]
+mod resource;
+pub mod shell;
+use crate::helper::resource::{
+    check_arg_len, input_fmt, printhelp, printusage, printusagenb, printusetemplate, throw_fatal,
+    usage_and_quit,
+};
+
+pub(crate) mod refs;
+use crate::helper::refs::*;
+
 use serde::{Deserialize, Serialize};
+//use std::env;
 use std::error::Error;
+//use std::fs::metadata;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::Write;
 use std::iter::*;
+use std::path::Path;
 use std::process::Command;
 
-const SELF_VERSION: &str = "2023 (0.1.0)";
+use self::shell::init_shell;
+
+pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
 #[derive(Debug, Serialize, Deserialize)]
-struct ProjectConfig {
+pub struct ProjectConfig {
     name: String,
     description: String,
     version: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct RunConfig {
+pub struct Tool {
+    name: String,
+    link: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DepsConfig {
+    tools: Vec<Tool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RunConfig {
     run: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct UniConfig {
+pub struct UniConfig {
     project: ProjectConfig,
+    deps: DepsConfig,
     r#do: RunConfig,
 }
 
-struct Cmd<'a> {
-    name: &'a str,
-    desc: &'a str,
-    usage: &'a str,
-}
-
-const RUNCMD:Cmd = Cmd {
-    name: "run",
-    desc: "Executes a .uni.yaml file",
-    usage: "run <filename>",
-};
-
-const  HELPCMD:Cmd = Cmd {
-    name: "help",
-    desc: "This command",
-    usage: "help",
-};
-
-const INITCMD:Cmd = Cmd {
-    name: "init",
-    desc: "Creates a new .uni.yaml file",
-    usage: "init <filename>",
-};
-
-macro_rules! errprint {
-    () => {
-        eprint!("\n")
-    };
-    ($($arg:tt)*) => {{
-        eprintln!("    {0}  {1}","[!]".red().bold(), format_args!($($arg)*))
-    }};
-}
-
-macro_rules! infoprint {
-    () => {
-        print!("\n")
-    };
-    ($($arg:tt)*) => {{
-        println!("    {0}  {1}","[i]".blue().bold(), format_args!($($arg)*))
-    }};
-}
-
-macro_rules! warnprint {
-    () => {
-        eprint!("\n")
-    };
-    ($($arg:tt)*) => {{
-        eprint!("    {0}  {1}", "[W]".yellow().bold(), format_args!($($arg)*))
-    }};
-}
-
-macro_rules! questionprint {
-    () => {
-        eprint!("\n")
-    };
-    ($($arg:tt)*) => {{
-        eprint!("    {0} {1}", "[?]".cyan().bold(), format_args!($($arg)*))
-    }};
-}
-
-macro_rules! successprint {
-    () => {
-        eprint!("\n")
-    };
-    ($($arg:tt)*) => {{
-        eprint!("    {0} {1}", "[✓]".green().bold(), format_args!($($arg)*))
-    }};
-}
-
-pub fn printusage(msg: &str) {
-    let ostype = std::env::consts::OS;
-    if ostype == "windows" {
-        infoprint!("Usage: {0}{1}", " ./unify ".black(), msg.black());
-    } else if ostype == "linux" || ostype == "macos" {
-        infoprint!("Usage: {0} {1}", " unify ".black(), msg.black());
-    }
-}
-
-pub fn usage(cmd: &str) {
+fn usage(cmd: &str) {
     match cmd {
         "help" => {
-            printusage("help");
+            printusage(HELPCMD.desc);
         }
         "run" => {
-            printusage("run <filename>");
-        }
-        "new" => {
-            printusage("new <filename>");
-        }
-        &_ => errprint!("{}", "FATAL ERROR: Invalid command.
-        If you somehow see this, you probably need to reinstall unify, like now.".red().bold()),
-    }
-}
-
-pub fn printusagenb(msg: &str) {
-    let ostype = std::env::consts::OS;
-    if ostype == "windows" {
-        println!("\t Usage: {0}{1}", " ./unify ".black(), msg.black());
-    } else if ostype == "linux" || ostype == "macos" {
-        println!("\t Usage: {0} {1}", " unify ".black(), msg.black());
-    }
-}
-
-pub fn usagenb(cmd: &str) {
-    match cmd {
-        "help" => {
-            printusagenb(&HELPCMD.usage);
-        }
-        "run" => {
-            printusagenb(&RUNCMD.usage);
+            printusage(RUNCMD.desc);
         }
         "init" => {
-            printusagenb(&INITCMD.usage);
+            printusage(INITCMD.desc);
         }
-        &_ => errprint!("{}", "FATAL ERROR: Invalid command.
-        If you somehow see this, you probably need to reinstall unify, like now.".red().bold()),
+        &_ => {
+            throw_fatal("Invalid command");
+        }
     }
 }
 
-pub fn check_arg_len(argsv: Vec<String>, lentocheck: usize) -> bool {
-    if argsv.len() == lentocheck {
-        return true;
-    } else {
-        return false;
+fn usagenb(cmd: &str) {
+    match cmd {
+        "help" => {
+            printusagenb(HELPCMD.usage);
+        }
+        "run" => {
+            printusagenb(RUNCMD.usage);
+        }
+        "init" => {
+            printusagenb(INITCMD.usage);
+        }
+        &_ => errprint!(
+            "{}",
+            "FATAL ERROR [0004]: Invalid command.
+        If you somehow see this, you probably need to reinstall unify, like now."
+                .red()
+                .bold()
+        ),
     }
 }
 
-pub fn usage_and_quit(cmd: &str, msg: &str) {
-    errprint!("{}", msg);
-    usage(cmd);
-    std::process::exit(0);
+fn createfile(ufile_name: String) -> Result<std::string::String, std::string::String> {
+    infoprint!("Creating unifile: {}", ufile_name);
+    let mut ufile = File::create(ufile_name).expect("[!] Error encountered while creating file!");
+    ufile
+        .write_all(
+            br"project: {
+                name: ,
+                description: ,
+                version: 0.0.0,
+              }
+              
+              do:
+                run:
+                  - echo hello world
+                  - echo this is a test
+                  - echo this is a test
+                
+",
+        )
+        .expect("[!] Error while writing to file");
+
+    Ok("File Created!".to_string())
 }
 
 pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
-        usage_and_quit("run", "Missing Filename!")
+        usage_and_quit(RUNCMD.name, "Missing Filename!")
     }
     // Read the .plu.yaml file
     let index_to_open = 2;
     if index_to_open < argsv.len() {
-        let filepath = argsv[index_to_open].to_string().to_owned() + &".uni.yml".to_string();
+        let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yml";
         let file = File::open(filepath.clone())?;
         let reader = BufReader::new(file);
 
         // Parse the YAML into PluConfig struct
         let config: UniConfig = serde_yaml::from_reader(reader)?;
-
         let mut okcount: i32 = 0;
         let mut cmdcount: i32 = 0;
         // Execute commands in the 'run' section
-        let mut rng = thread_rng();
-
         infoprint!("Running '{}': \n", filepath);
         for command in config.r#do.run {
             cmdcount += 1;
             let mut parts = command.split_whitespace();
             let program = parts.next().ok_or("Missing command")?;
             let args: Vec<&str> = parts.collect();
-
-            let status = Command::new(program).args(args).status()?;
-
-            if status.success() {
-                //println!("Command '{}' executed successfully", command);
-                okcount += 1;
+            if cfg!(target_os = "windows") {
+                let status = Command::new(program).args(args).status()?;
+                if status.success() {
+                    infoprint!("Command '{}' executed successfully", command);
+                    okcount += 1;
+                } else {
+                    errprint!("Error executing command: '{}'", command);
+                }
             } else {
-                errprint!("Error executing command: '{}'", command);
+                let status = Command::new(program).args(args).status()?;
+                if status.success() {
+                    infoprint!("Command '{}' executed successfully", command);
+                    okcount += 1;
+                } else {
+                    errprint!("Error executing command: '{}'", command);
+                }
             }
         }
 
         if cmdcount == okcount {
             println!();
-            successprint!(
-                "All tasks completed successfully"
-            );
+            successprint!("All tasks completed successfully");
             println!();
         }
         Ok(())
@@ -216,30 +175,7 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn printhelp(cmd: Cmd) {
-    infoprint!("{0} \t Info: {1}", cmd.name, cmd.desc);
-    print!("\t");
-    usagenb(&cmd.name);
-}
-
-fn printusetemplate() {
-    let ostype = std::env::consts::OS;
-    if ostype == "windows" {
-        infoprint!("Usage: unify [--version] [--help] <command> [arguments]");
-    } else if ostype == "linux" || ostype == "macos" {
-        infoprint!("Usage: unify [--version] [--help] <command> [arguments]");
-    }
-}
-
-
-pub fn help(argsv: Vec<String>) {
-    if check_arg_len(argsv.clone(), 1) {
-        usage_and_quit("help", "Invalid Arguments!")
-    }
-    if argsv.len() != 2 {
-        usage("help");
-    }
-
+pub fn help() {
     print!("\t");
     println!(
         r"
@@ -247,11 +183,12 @@ pub fn help(argsv: Vec<String>) {
           • ┏
     ┓┏ ┏┓ ┓ ╋━━┓┏
     ┗┻━┛┗━┗━┛  ┗┫
-   By Dimension ┛ Version: {}
-                            
-    ", SELF_VERSION
+                ┛
+    Version: {}                      
+    ",
+        SELF_VERSION
     );
-    
+
     infoprint!("Unify is a project dependancy grabber");
     printusetemplate();
     println!();
@@ -263,18 +200,39 @@ pub fn help(argsv: Vec<String>) {
 
 pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::String> {
     if argsv.len() == 3 {
-        let ufile_name: String = format!("{}.uni.yaml", &argsv[2]);
-        infoprint!("Creating unifile: {}", ufile_name);
-        let mut plufile =
-            File::create(ufile_name).expect("[!] Error encountered while creating file!");
-        plufile
-            .write_all(b"do: { \n \t echo hello world!\n }")
-            .expect("[!] Error while writing to file");
+        let ufile_name: String = format!("{}.uni.yaml", &argsv[2]).to_owned();
+        let ufile_name_str: &str = &ufile_name[..];
 
-        return Ok("File Created!".to_string());
+        if Path::new(ufile_name_str).exists() {
+            errprint!("File {} already Exists!", ufile_name);
+            match questionprint!("Do you want to continue? (Y/N)").as_str() {
+                "y" | "Y" => {
+                    let _ = createfile(ufile_name);
+                    Ok("OK".to_string())
+                }
+                &_ => {
+                    errprint!("File creation aborted.");
+                    usage_and_quit(INITCMD.name, "INVALID");
+                    Ok("fail".to_string())
+                }
+            }
+        } else {
+            let _ = createfile(ufile_name);
+            Ok("OK".to_string())
+        }
+    } else {
+        usage_and_quit(INITCMD.name, "Invalid arguments!");
+        Err("Invalid Arguments!".to_string())
     }
-    errprint!("Invalid arguments!");
-    return Err("Invalid Arguments!".to_string());
+}
+
+pub fn load(argsv: Vec<String>) {
+    match run(argsv) {
+        Err(_) => {
+            errprint!("Error loading file")
+        }
+        Ok(()) => init_shell(),
+    }
 }
 
 pub fn invalid_args_notify(args: Vec<String>) {
@@ -284,17 +242,10 @@ pub fn invalid_args_notify(args: Vec<String>) {
         args[1].red().bold(),
         "'".red().bold()
     );
-    eprintln!(
-        "Run 'unify help' to see available commands."
-    );
+    infoprint!("Run 'unify help' to see available commands.");
 }
 
-pub fn argparse(argsv: Vec<String>, pos: usize, item: &str) -> bool {
+pub fn argparse(argsv: &Vec<String>, pos: usize, cmd: Cmd) -> bool {
     // Parse arguments
-    let n_item = item.to_string();
-    if argsv.len() > 1 && argsv[pos] == n_item {
-        return true;
-    } else {
-        return false;
-    }
+    cmd.aliases.contains(&argsv[pos].as_str())
 }
