@@ -6,6 +6,10 @@ on:
     branches: [ "hot" ]
   pull_request:
     branches: [ "hot" ]
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '16 21 * * *'
+
   
   
 env:
