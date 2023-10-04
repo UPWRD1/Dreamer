@@ -80,7 +80,7 @@ fn unish_loop() {
         let mut previous_cmd: Option<Child> = Default::default();
 
         while let Some(command) = commands.next() {
-            let mut parts = command.trim().split_whitespace(); //.map(str::to_string).collect();
+            let mut parts = command.split_whitespace(); //.map(str::to_string).collect();
             let command = parts.next().unwrap();
             let args = parts;
 
