@@ -12,36 +12,39 @@ use std::{
 
 use super::resource::quit;
 
-//pub const WINCMDS: [&str; 4] = ["help", "ls", "cat", "clear"];
-/*
-fn unish_exec(command: &str, args: SplitWhitespace<'_>, previous_cmd: &mut Option<Child>, commands: &mut std::iter::Peekable<std::str::Split<'_, &str>>) {
+/* 
+fn unish_exec(command: &str, args: SplitWhitespace<'_>, mut previous_cmd: Option<Child>, mut commands: std::iter::Peekable<std::str::Split<'_, &str>>) {
 
-    let stdin = previous_cmd
-    .map_or(Stdio::inherit(), |output: Child| { Stdio::from(output.stdout.unwrap())});
+            //unish_exec(command, args, previous_cmd, commands);
+            let stdin = previous_cmd.map_or(Stdio::inherit(), |output: Child| {
+                Stdio::from(output.stdout.unwrap())
+            });
 
-    let stdout = if commands.peek().is_some() {
-        Stdio::piped()
-    } else {
-        Stdio::inherit()
-    };
+            let stdout = if commands.peek().is_some() {
+                Stdio::piped()
+            } else {
+                Stdio::inherit()
+            };
 
-    let output = Command::new(command)
-    .args(args)
-    .stdin(stdin)
-    .stdout(stdout)
-    .spawn();
+            let output = Command::new(command)
+                .args(args)
+                .stdin(stdin)
+                .stdout(stdout)
+                .spawn();
 
-    match output {
-        Ok(output) => { *previous_cmd = Some(output);},
-        Err(e) => {
-            let previous_cmd: &mut Option<Child> = &mut None;
-            errprint!("{}", e); }
-    }
-
+            match output {
+                Ok(output) => {
+                    return previous_cmd = Some(output);
+                }
+                Err(e) => {
+                    errprint!("{}", e);
+                    return previous_cmd = None;
+                    
+                }
+            }
 }
 
-fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: &mut Option<Child>, commands: &mut std::iter::Peekable<std::str::Split<'_, &str>>) {
-
+fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: Option<Child>, commands: std::iter::Peekable<std::str::Split<'_, &str>>) {
     match command {
         "cd" => {
             let new_dir = &args.peekable().peek().map_or("/", |x| *x);
@@ -49,16 +52,19 @@ fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: &
             if let Err(e) = env::set_current_dir(root) {
                 errprint!("{}", e);
             }
-        },
-        "exit" => { quit(); },
+        }
+        "exit" => {
+            quit();
+        }
 
         "clear" | "cls" => print!("\x1B[2J\x1B[1;1H"),
 
-        &_ => {
+        command => {
             unish_exec(command, args, previous_cmd, commands);
+        }
     }
 }
-}
+
 */
 
 fn unish_loop() {
@@ -71,13 +77,14 @@ fn unish_loop() {
         stdin().read_line(&mut input).unwrap();
 
         let mut commands = input.trim().split(" | ").peekable();
-        let mut previous_cmd = None;
+        let mut previous_cmd: Option<Child> = Default::default();
 
         while let Some(command) = commands.next() {
-            let mut parts = command.trim().split_whitespace(); //.map(str::to_string).collect();
+            let mut parts = command.split_whitespace(); //.map(str::to_string).collect();
             let command = parts.next().unwrap();
             let args = parts;
-            //unish_check_builtin(command, args, previous_cmd, commands);
+
+            
             match command {
                 "cd" => {
                     let new_dir = &args.peekable().peek().map_or("/", |x| *x);
@@ -121,6 +128,7 @@ fn unish_loop() {
                     }
                 }
             }
+            
         }
         if let Some(mut final_command) = previous_cmd {
             // block until the final command has finished

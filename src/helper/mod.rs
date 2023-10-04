@@ -245,7 +245,7 @@ pub fn invalid_args_notify(args: Vec<String>) {
     infoprint!("Run 'unify help' to see available commands.");
 }
 
-pub fn argparse(argsv: &Vec<String>, pos: usize, cmd: Cmd) -> bool {
+pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
     // Parse arguments
     cmd.aliases.contains(&argsv[pos].as_str())
 }
