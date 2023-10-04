@@ -56,7 +56,7 @@ pub struct RunConfig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UniConfig {
     project: ProjectConfig,
-    deps: DepsConfig,
+    //deps: DepsConfig,
     r#do: RunConfig,
 }
 
@@ -102,24 +102,69 @@ fn createfile(ufile_name: String) -> Result<std::string::String, std::string::St
     infoprint!("Creating unifile: {}", ufile_name);
     let mut ufile = File::create(ufile_name).expect("[!] Error encountered while creating file!");
     ufile
-        .write_all(
-            br"project: {
-                name: ,
-                description: ,
-                version: 0.0.0,
-              }
-              
-              do:
-                run:
-                  - echo hello world
-                  - echo this is a test
-                  - echo this is a test
-                
-",
+        .write(
+            b"project: {
+  name: \"\",
+  description: \"\",
+  version: \"0.0.0\",
+}
+
+do:
+  run:
+    - echo hello world",
         )
         .expect("[!] Error while writing to file");
 
     Ok("File Created!".to_string())
+}
+
+fn run_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>>  {
+    let reader: BufReader<File> = BufReader::new(v_file);
+    // Parse the YAML into PluConfig struct
+    let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
+    match config {
+        Err(_) => {
+            errprint!("Invalid Config file '{}'", filepath);
+            Err("Invalid Config".into())
+        }
+
+        Ok(config) => {
+            let mut okcount: i32 = 0;
+            let mut cmdcount: i32 = 0;
+            // Execute commands in the 'run' section
+            infoprint!("Running '{}': \n", filepath);
+            for command in config.r#do.run {
+                cmdcount += 1;
+                let mut parts = command.split_whitespace();
+                let program = parts.next().ok_or("Missing command")?;
+                let args: Vec<&str> = parts.collect();
+                if cfg!(target_os = "windows") {
+                    let status = Command::new(program).args(args).status()?;
+                    if status.success() {
+                        //infoprint!("Command '{}' executed successfully", command);
+                        okcount += 1;
+                    } else {
+                        errprint!("Error executing command: '{}'", command);
+                    }
+                } else {
+                    let status = Command::new(program).args(args).status()?;
+                    if status.success() {
+                        infoprint!("Command '{}' executed successfully", command);
+                        okcount += 1;
+                    } else {
+                        errprint!("Error executing command: '{}'", command);
+                    }
+                }
+            }
+
+            if cmdcount == okcount {
+                println!();
+                successprint!("All tasks completed successfully");
+                println!();
+            }
+            Ok(())
+        }
+    }
 }
 
 pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
@@ -130,48 +175,22 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     let index_to_open = 2;
     if index_to_open < argsv.len() {
         let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yml";
-        let file = File::open(filepath.clone())?;
-        let reader = BufReader::new(file);
-
-        // Parse the YAML into PluConfig struct
-        let config: UniConfig = serde_yaml::from_reader(reader)?;
-        let mut okcount: i32 = 0;
-        let mut cmdcount: i32 = 0;
-        // Execute commands in the 'run' section
-        infoprint!("Running '{}': \n", filepath);
-        for command in config.r#do.run {
-            cmdcount += 1;
-            let mut parts = command.split_whitespace();
-            let program = parts.next().ok_or("Missing command")?;
-            let args: Vec<&str> = parts.collect();
-            if cfg!(target_os = "windows") {
-                let status = Command::new(program).args(args).status()?;
-                if status.success() {
-                    infoprint!("Command '{}' executed successfully", command);
-                    okcount += 1;
+        let file: Result<File, std::io::Error> = File::open(filepath.clone());
+        match file {
+            Err(_error) => {
+                let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yaml";
+                let file: Result<File, std::io::Error> = File::open(filepath.clone());
+                if file.is_err() {
+                    errprint!("Cannot find file '{}'", filepath);
+                    return Err("Cannot find file".into());
                 } else {
-                    errprint!("Error executing command: '{}'", command);
-                }
-            } else {
-                let status = Command::new(program).args(args).status()?;
-                if status.success() {
-                    infoprint!("Command '{}' executed successfully", command);
-                    okcount += 1;
-                } else {
-                    errprint!("Error executing command: '{}'", command);
+                    run_exec(file.unwrap(), filepath)
                 }
             }
+            Ok(v_file) => run_exec(v_file, filepath)
         }
-
-        if cmdcount == okcount {
-            println!();
-            successprint!("All tasks completed successfully");
-            println!();
-        }
-        Ok(())
     } else {
-        errprint!("File '{}' not found!", argsv[2]);
-        Err("Cannot find file".into())
+        Err("Bad File".into())
     }
 }
 
