@@ -4,6 +4,13 @@ project: {
   version: "0.0.0",
 }
 
+deps:
+  tools:
+    - name: "asdf"
+      link: "https://google.com"
+
+
+
 do:
   run:
     - echo hello world
