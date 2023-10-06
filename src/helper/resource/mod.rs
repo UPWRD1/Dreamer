@@ -8,6 +8,7 @@ use crate::helper::Cmd;
 use std::io;
 use std::io::BufRead;
 use std::io::Write;
+use std::io::Read;
 use std::fmt::Arguments;
 use std::iter::*;
 
@@ -95,11 +96,6 @@ macro_rules! shellprint {
         print!("    {0} {1} ", "[>]".yellow().bold(), format_args!($($arg)*))
     }};
 }
-/* x
-macro_rules! vec_of_strings {
-    ($($x:expr),*) => (vec![$($x.to_string()),*]);
-}
-*/
 
 pub fn throw_fatal(msg: &str) {
     errprint!(
@@ -162,6 +158,23 @@ pub fn option_list(kind: &str, opts: Vec<&str>, msg: &str) -> std::string::Strin
 pub fn quit() {
     std::process::exit(0);
 }
+pub fn clear_term() {
+    print!("\x1B[2J\x1B[1;1H")
+}
+
+pub fn pause() {
+    let mut stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    // We want the cursor to stay at the end of the line, so we print without a newline and flush manually.
+    write!(stdout, "{} Press any key to continue...", "[i]".blue().bold()).unwrap();
+    stdout.flush().unwrap();
+
+    // Read a single byte and discard
+    let _ = stdin.read(&mut [0u8]).unwrap();
+    print!("\n");
+}
+
 pub fn printhelp(cmd: Cmd) {
     infoprint!("{0} \t Info: {1}", cmd.name, cmd.desc);
     print!("\t");

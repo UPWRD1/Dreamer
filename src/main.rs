@@ -25,7 +25,7 @@ pub fn cli() {
     // Main cli function
     let args: Vec<String> = env::args().collect(); // Argument collection
                                                    //println!("{}", args.len()); // Parsi
-
+    let env_cmds: Vec<String> = vec![];
     if args.clone().len() == 1 {
         //help();
         init_shell()
@@ -41,7 +41,7 @@ pub fn cli() {
                 help();
             }
             _ if argparse(&args, 1, LOADCMD) => {
-                load(args);
+                load(args, env_cmds);
             }
             _ => invalid_args_notify(args), // Create new plufile
         }
