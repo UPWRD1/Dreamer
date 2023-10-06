@@ -24,11 +24,11 @@ Error codes:
 pub fn cli() {
     // Main cli function
     let args: Vec<String> = env::args().collect(); // Argument collection
-                                                   //println!("{}", args.len()); // Parsi
-    let env_cmds: Vec<String> = vec![];
+                                      //println!("{}", args.len()); // Parsi
+    pub const ENV_COMMANDS: Vec<String> = vec![];
     if args.clone().len() == 1 {
         //help();
-        init_shell()
+        init_shell(ENV_COMMANDS)
     } else {
         match args[1] {
             _ if argparse(&args, 1, INITCMD) => {
@@ -41,7 +41,7 @@ pub fn cli() {
                 help();
             }
             _ if argparse(&args, 1, LOADCMD) => {
-                load(args, env_cmds);
+                load(args, ENV_COMMANDS);
             }
             _ => invalid_args_notify(args), // Create new plufile
         }

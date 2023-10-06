@@ -8,7 +8,7 @@ use crate::helper::Cmd;
 use std::io;
 use std::io::BufRead;
 use std::io::Write;
-use std::io::Read;
+//use std::io::Read;
 use std::fmt::Arguments;
 use std::iter::*;
 
@@ -161,20 +161,18 @@ pub fn quit() {
 pub fn clear_term() {
     print!("\x1B[2J\x1B[1;1H")
 }
-
+/*
 pub fn pause() {
     let mut stdin = io::stdin();
     let mut stdout = io::stdout();
 
-    // We want the cursor to stay at the end of the line, so we print without a newline and flush manually.
     write!(stdout, "{} Press any key to continue...", "[i]".blue().bold()).unwrap();
     stdout.flush().unwrap();
 
-    // Read a single byte and discard
     let _ = stdin.read(&mut [0u8]).unwrap();
     print!("\n");
 }
-
+*/
 pub fn printhelp(cmd: Cmd) {
     infoprint!("{0} \t Info: {1}", cmd.name, cmd.desc);
     print!("\t");

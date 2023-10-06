@@ -1,5 +1,5 @@
 //use super::resource::throw_fatal;
-use crate::helper::{colored::Colorize, resource::clear_term};
+use crate::helper::{colored::Colorize, clear_term, SELF_VERSION, help};
 //use crate::helper::input_fmt;
 use std::{
     env::{self},
@@ -12,7 +12,6 @@ use std::{
 
 use super::resource::quit;
 
-//pub const WINCMDS: [&str; 4] = ["help", "ls", "cat", "clear"];
 /*
 fn unish_exec(command: &str, args: SplitWhitespace<'_>, previous_cmd: &mut Option<Child>, commands: &mut std::iter::Peekable<std::str::Split<'_, &str>>) {
 
@@ -61,11 +60,11 @@ fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: &
 }
 */
 
-fn unish_check_is_local(cmd: &str) -> bool {
-    super::refs::ENV_COMMANDS.contains(&cmd.to_string())
+fn unish_check_is_local(cmd: &str, env_cmds: &Vec<String>) -> bool {
+    env_cmds.contains(&cmd.to_string())
 }
 
-fn unish_loop() {
+fn unish_loop(env_cmds: Vec<String>) {
     loop {
         let curr_dir = env::current_dir();
         shellprint!("(~{}) [unify] @> ", curr_dir.unwrap().to_string_lossy());
@@ -91,14 +90,17 @@ fn unish_loop() {
                                 errprint!("{}", e);
                             }
                         }
-                        "exit" => {
+                        "exit()" => {
                             quit();
+                        }
+                        "help()" => {
+                            help();
                         }
 
                         "clear" | "cls" => clear_term(),
 
                         command => {
-                            if unish_check_is_local(command) {
+                            if unish_check_is_local(command, &env_cmds) {
                                 infoprint!("LOCAL");
                                 //unish_exec(command, args, previous_cmd, commands);
                                 let stdin = previous_cmd
@@ -111,7 +113,10 @@ fn unish_loop() {
                                 } else {
                                     Stdio::inherit()
                                 };
-
+                                let home_dir = env::home_dir().unwrap();
+                                let home_dir_u = home_dir.display();
+                                let command_pathv: String = format!("{home_dir_u}\\unify\\{command}");
+                                infoprint!("{}", command_pathv);
                                 let output = Command::new(command)
                                     .args(args)
                                     .stdin(stdin)
@@ -173,6 +178,10 @@ fn unish_loop() {
     }
 }
 
-pub fn init_shell() {
-    unish_loop();
+pub fn init_shell(env_cmds: Vec<String>) {
+    infoprint!("Entering Virtual Environment...");
+    //pause();
+    //clear_term();
+    infoprint!("Unify {0} (type 'exit()' to exit, 'help()' for help)", SELF_VERSION);
+    unish_loop(env_cmds);
 }

@@ -9,7 +9,7 @@ mod resource;
 pub mod shell;
 use crate::helper::resource::{
     check_arg_len, input_fmt, printhelp, printusage, printusagenb, printusetemplate, throw_fatal,
-    usage_and_quit, quit, clear_term, pause,
+    usage_and_quit, quit, clear_term,
 };
 
 pub(crate) mod refs;
@@ -247,7 +247,7 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
     }
 }
 
-fn load_exec(v_file: File, filepath: String, mut env_cmds: Vec<String>) -> Result<(), Box<dyn Error>> {
+fn load_exec(v_file: File, filepath: String, mut env_cmds: Vec<String>) -> Result<Vec<String>, Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into DepConfig struct
     let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
@@ -262,12 +262,12 @@ fn load_exec(v_file: File, filepath: String, mut env_cmds: Vec<String>) -> Resul
                 env_cmds.push(tool.name.clone());
                 infoprint!("Installing {0} from {1}", tool.name, tool.link);
             }
-            Ok(())
+            Ok(env_cmds)
         }
     }
 }
 
-pub fn load_deps(argsv: Vec<String>, env_cmds: Vec<String>) -> Result<(), Box<dyn Error>> {
+pub fn load_deps(argsv: Vec<String>, env_cmds: &Vec<String>) -> Result<Vec<String>, Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LOADCMD.name, "Missing Filename!")
     }
@@ -275,13 +275,13 @@ pub fn load_deps(argsv: Vec<String>, env_cmds: Vec<String>) -> Result<(), Box<dy
     let index_to_open = 2;
     if index_to_open < argsv.len() {
         let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yml";
-        let file: Result<File, std::io::Error> = File::open(filepath);
+        let file: Result<File, std::io::Error> = File::open(filepath.clone());
         match file {
             Err(_error) => {
                 let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yaml";
                 let file: Result<File, std::io::Error> = File::open(filepath.clone());
                 match file {
-                    Ok(v_file) => load_exec(v_file, filepath, env_cmds),
+                    Ok(v_file) => load_exec(v_file, filepath, env_cmds.to_vec()),
                     Err(_error) => {
                         errprint!("Cannot find file '{}'", filepath);
                         infoprint!("Help: Try 'unify init {}' to create a new uni.yaml file.", filepath);
@@ -290,7 +290,7 @@ pub fn load_deps(argsv: Vec<String>, env_cmds: Vec<String>) -> Result<(), Box<dy
                 }
 
             }
-            Ok(v_file) => load_exec(v_file, filepath, env_cmds),
+            Ok(v_file) => load_exec(v_file, filepath, env_cmds.to_vec()),
         }
     } else {
         Err("Bad File".into())
@@ -298,16 +298,12 @@ pub fn load_deps(argsv: Vec<String>, env_cmds: Vec<String>) -> Result<(), Box<dy
 }
 
 pub fn load(argsv: Vec<String>, env_cmds: Vec<String>) {
-    match load_deps(argsv.to_owned(), env_cmds) {
+    match load_deps(argsv.to_owned(), &env_cmds.to_vec()) {
         Err(_) => {
             quit();
         }
-        Ok(()) => {
-            infoprint!("Entering Virtual Environment...");
-            //pause();
-            clear_term();
-            infoprint!("Unify {0} (type 'exit' to exit)", SELF_VERSION);
-            init_shell();
+        Ok(env_cmds) => {
+            init_shell(env_cmds.clone());
         }
     }
 }

@@ -32,5 +32,3 @@ pub const LOADCMD: Cmd = Cmd {
     usage: "load [filename]",
     aliases: ["load", "l", "--load", "-l"],
 };
-
-pub const ENV_COMMANDS: Vec<String> = vec![];
