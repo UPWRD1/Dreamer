@@ -3,14 +3,16 @@ extern crate colored;
 
 use crate::helper::usage;
 use crate::helper::usagenb;
-use colored::Colorize;
 use crate::helper::Cmd;
+use colored::Colorize;
 use std::io;
 use std::io::BufRead;
 use std::io::Write;
 //use std::io::Read;
 use std::fmt::Arguments;
 use std::iter::*;
+
+use super::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
 
 macro_rules! errprint {
     () => {
@@ -188,6 +190,33 @@ pub fn printusetemplate() {
     }
 }
 
+fn printextrahelp(cmd: Cmd) {
+    infoprint!("Help: {}", cmd.name);
+    printusagenb(cmd.usage);
+    println!("\t Info: {}", cmd.longdesc);
+}
+
+pub fn extrahelp(cmd: &str) {
+    match matchcmd(cmd) {
+        Ok(cmd) => {
+            printextrahelp(cmd)
+        }
+        Err(..) => usage_and_quit(HELPCMD.name, "Invalid Command Name")
+    }
+}
+
 pub fn check_arg_len(argsv: Vec<String>, lentocheck: usize) -> bool {
     argsv.len() == lentocheck
+}
+
+pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
+    match cmd {
+        "help" => Ok(HELPCMD),
+        "run" => Ok(RUNCMD),
+        "init" => Ok(INITCMD),
+        "load" => Ok(LOADCMD),
+        &_ => {
+            Err("INVALID CMD".to_string())
+        }
+    }
 }

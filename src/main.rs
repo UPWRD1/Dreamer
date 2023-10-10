@@ -39,7 +39,7 @@ pub fn cli() {
                 let _ = run(args);
             }
             _ if argparse(&args, 1, HELPCMD) => {
-                help();
+                help(args);
             }
             _ if argparse(&args, 1, LOADCMD) => {
                 load(args, ENV_COMMANDS);

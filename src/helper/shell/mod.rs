@@ -1,5 +1,5 @@
 //use super::resource::throw_fatal;
-use crate::helper::{colored::Colorize, clear_term, SELF_VERSION, help};
+use crate::helper::{colored::Colorize, clear_term, SELF_VERSION};
 //use crate::helper::input_fmt;
 use std::{
     env::{self},
@@ -92,9 +92,6 @@ fn unish_loop(env_cmds: Vec<String>) {
                         }
                         "exit()" => {
                             quit();
-                        }
-                        "help()" => {
-                            help();
                         }
 
                         "clear" | "cls" => clear_term(),

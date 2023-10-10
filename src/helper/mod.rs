@@ -8,8 +8,8 @@ extern crate serde_yaml;
 mod resource;
 pub mod shell;
 use crate::helper::resource::{
-    check_arg_len, input_fmt, printhelp, printusage, printusagenb, printusetemplate, throw_fatal,
-    usage_and_quit, quit, clear_term,
+    check_arg_len, clear_term, input_fmt, printhelp, printusage, printusagenb, printusetemplate,
+    quit, usage_and_quit,
 };
 
 pub(crate) mod refs;
@@ -26,8 +26,9 @@ use std::iter::*;
 use std::path::Path;
 use std::process::Command;
 
-use self::shell::init_shell;
 use self::refs::AVAILABLE_CMDS;
+use self::resource::{extrahelp, matchcmd};
+use self::shell::init_shell;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
@@ -62,41 +63,11 @@ pub struct UniConfig {
 }
 
 fn usage(cmd: &str) {
-    match cmd {
-        "help" => {
-            printusage(HELPCMD.usage);
-        }
-        "run" => {
-            printusage(RUNCMD.usage);
-        }
-        "init" => {
-            printusage(INITCMD.usage);
-        }
-        "load" => {
-            printusage(LOADCMD.usage);
-        }
-        &_ => {
-            throw_fatal("Invalid command");
-        }
-    }
+    printusage(matchcmd(cmd).unwrap().usage);
 }
 
 fn usagenb(cmd: &str) {
-    match cmd {
-        "help" => {
-            printusagenb(HELPCMD.usage);
-        }
-        "run" => {
-            printusagenb(RUNCMD.usage);
-        }
-        "init" => {
-            printusagenb(INITCMD.usage);
-        }
-        "load" => {
-            printusagenb(LOADCMD.usage);
-        }
-        &_ => throw_fatal("Invalid Command")
-    }
+    printusagenb(matchcmd(cmd).unwrap().usage);
 }
 
 fn createfile(ufile_name: String) -> Result<std::string::String, std::string::String> {
@@ -186,7 +157,10 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
                     Ok(v_file) => run_exec(v_file, filepath),
                     Err(_error) => {
                         errprint!("Cannot find file '{}'", filepath);
-                        infoprint!("Help: Try 'unify init {}' to create a new uni.yaml file.", filepath);
+                        infoprint!(
+                            "Help: Try 'unify init {}' to create a new uni.yaml file.",
+                            filepath
+                        );
                         Err("Cannot find file".into())
                     }
                 }
@@ -197,23 +171,26 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     }
 }
 
-pub fn help() {
-    print!("\t");
-    println!(
-        r"
+pub fn help(argsv: Vec<String>) {
+    if argsv.len() == 2 {
+        print!("\t");
+        println!(
+            r"
 
           • ┏      Unify is a project dependancy grabber
     ┓┏ ┏┓ ┓ ╋━━┓┏
     ┗┻━┛┗━┗━┛  ┗┫  Version: {}
                 ┛",
-        SELF_VERSION
-    );
-    printusetemplate();
-    infoprint!("Commands:");
-    for x in AVAILABLE_CMDS {
-        printhelp(x);
+            SELF_VERSION
+        );
+        printusetemplate();
+        infoprint!("Commands:");
+        for x in AVAILABLE_CMDS {
+            printhelp(x);
+        }
+    } else {
+        extrahelp(argsv[2].as_str());
     }
-
 }
 
 pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::String> {
@@ -244,7 +221,11 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
     }
 }
 
-fn load_exec(v_file: File, filepath: String, mut env_cmds: Vec<String>) -> Result<Vec<String>, Box<dyn Error>> {
+fn load_exec(
+    v_file: File,
+    filepath: String,
+    mut env_cmds: Vec<String>,
+) -> Result<Vec<String>, Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into DepConfig struct
     let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
@@ -264,7 +245,10 @@ fn load_exec(v_file: File, filepath: String, mut env_cmds: Vec<String>) -> Resul
     }
 }
 
-pub fn load_deps(argsv: Vec<String>, env_cmds: &Vec<String>) -> Result<Vec<String>, Box<dyn Error>> {
+pub fn load_deps(
+    argsv: Vec<String>,
+    env_cmds: &Vec<String>,
+) -> Result<Vec<String>, Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LOADCMD.name, "Missing Filename!")
     }
@@ -281,11 +265,13 @@ pub fn load_deps(argsv: Vec<String>, env_cmds: &Vec<String>) -> Result<Vec<Strin
                     Ok(v_file) => load_exec(v_file, filepath, env_cmds.to_vec()),
                     Err(_error) => {
                         errprint!("Cannot find file '{}'", filepath);
-                        infoprint!("Help: Try 'unify init {}' to create a new uni.yaml file.", filepath);
+                        infoprint!(
+                            "Help: Try 'unify init {}' to create a new uni.yaml file.",
+                            filepath
+                        );
                         Err("Cannot find file".into())
                     }
                 }
-
             }
             Ok(v_file) => load_exec(v_file, filepath, env_cmds.to_vec()),
         }
