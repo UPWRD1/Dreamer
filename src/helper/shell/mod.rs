@@ -1,5 +1,5 @@
 //use super::resource::throw_fatal;
-use crate::helper::{colored::Colorize, clear_term, SELF_VERSION};
+use crate::helper::{clear_term, colored::Colorize, SELF_VERSION};
 //use crate::helper::input_fmt;
 use std::{
     env::{self},
@@ -182,6 +182,9 @@ pub fn init_shell(env_cmds: Vec<String>) {
     infoprint!("Entering Virtual Environment...");
     //pause();
     //clear_term();
-    infoprint!("Unify {0} (type 'exit()' to exit, 'help()' for help)", SELF_VERSION);
+    infoprint!(
+        "Unify {0} (type 'exit()' to exit, 'help()' for help)",
+        SELF_VERSION
+    );
     unish_loop(env_cmds);
 }

@@ -245,10 +245,7 @@ fn load_exec(
     }
 }
 
-pub fn load_deps(
-    argsv: Vec<String>,
-    env_cmds: &[String],
-) -> Result<Vec<String>, Box<dyn Error>> {
+pub fn load_deps(argsv: Vec<String>, env_cmds: &[String]) -> Result<Vec<String>, Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LOADCMD.name, "Missing Filename!")
     }

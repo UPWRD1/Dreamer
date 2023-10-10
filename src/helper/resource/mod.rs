@@ -198,10 +198,8 @@ fn printextrahelp(cmd: Cmd) {
 
 pub fn extrahelp(cmd: &str) {
     match matchcmd(cmd) {
-        Ok(cmd) => {
-            printextrahelp(cmd)
-        }
-        Err(..) => usage_and_quit(HELPCMD.name, "Invalid Command Name")
+        Ok(cmd) => printextrahelp(cmd),
+        Err(..) => usage_and_quit(HELPCMD.name, "Invalid Command Name"),
     }
 }
 
@@ -215,8 +213,6 @@ pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
         "run" => Ok(RUNCMD),
         "init" => Ok(INITCMD),
         "load" => Ok(LOADCMD),
-        &_ => {
-            Err("INVALID CMD".to_string())
-        }
+        &_ => Err("INVALID CMD".to_string()),
     }
 }

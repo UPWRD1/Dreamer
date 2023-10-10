@@ -25,7 +25,7 @@ Error codes:
 pub fn cli() {
     // Main cli function
     let args: Vec<String> = env::args().collect(); // Argument collection
-                                      //println!("{}", args.len()); // Parsi
+                                                   //println!("{}", args.len()); // Parsi
     pub const ENV_COMMANDS: Vec<String> = vec![];
     if args.clone().len() == 1 {
         //help();
