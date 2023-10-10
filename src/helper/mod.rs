@@ -27,6 +27,7 @@ use std::path::Path;
 use std::process::Command;
 
 use self::shell::init_shell;
+use self::refs::AVAILABLE_CMDS;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
@@ -63,13 +64,16 @@ pub struct UniConfig {
 fn usage(cmd: &str) {
     match cmd {
         "help" => {
-            printusage(HELPCMD.desc);
+            printusage(HELPCMD.usage);
         }
         "run" => {
-            printusage(RUNCMD.desc);
+            printusage(RUNCMD.usage);
         }
         "init" => {
-            printusage(INITCMD.desc);
+            printusage(INITCMD.usage);
+        }
+        "load" => {
+            printusage(LOADCMD.usage);
         }
         &_ => {
             throw_fatal("Invalid command");
@@ -88,13 +92,10 @@ fn usagenb(cmd: &str) {
         "init" => {
             printusagenb(INITCMD.usage);
         }
-        &_ => errprint!(
-            "{}",
-            "FATAL ERROR [0004]: Invalid command.
-        If you somehow see this, you probably need to reinstall unify, like now."
-                .red()
-                .bold()
-        ),
+        "load" => {
+            printusagenb(LOADCMD.usage);
+        }
+        &_ => throw_fatal("Invalid Command")
     }
 }
 
@@ -201,22 +202,18 @@ pub fn help() {
     println!(
         r"
 
-          • ┏
+          • ┏      Unify is a project dependancy grabber
     ┓┏ ┏┓ ┓ ╋━━┓┏
-    ┗┻━┛┗━┗━┛  ┗┫
-                ┛
-    Version: {}                      
-    ",
+    ┗┻━┛┗━┗━┛  ┗┫  Version: {}
+                ┛",
         SELF_VERSION
     );
-
-    infoprint!("Unify is a project dependancy grabber");
     printusetemplate();
-    println!();
     infoprint!("Commands:");
-    printhelp(HELPCMD);
-    printhelp(RUNCMD);
-    printhelp(INITCMD);
+    for x in AVAILABLE_CMDS {
+        printhelp(x);
+    }
+
 }
 
 pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::String> {

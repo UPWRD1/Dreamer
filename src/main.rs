@@ -12,6 +12,7 @@ use helper::{argparse, help, init, invalid_args_notify, load, run};
 use helper::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
 
 use helper::shell::init_shell;
+
 /*
 Error codes:
 0000 OK

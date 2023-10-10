@@ -32,3 +32,5 @@ pub const LOADCMD: Cmd = Cmd {
     usage: "load [filename]",
     aliases: ["load", "l", "--load", "-l"],
 };
+
+pub const AVAILABLE_CMDS: [&Cmd; 4] = [&HELPCMD, &LOADCMD, &RUNCMD, &INITCMD];

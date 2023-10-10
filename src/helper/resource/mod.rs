@@ -173,7 +173,7 @@ pub fn pause() {
     print!("\n");
 }
 */
-pub fn printhelp(cmd: Cmd) {
+pub fn printhelp(cmd: &Cmd) {
     infoprint!("{0} \t Info: {1}", cmd.name, cmd.desc);
     print!("\t");
     usagenb(cmd.name);

@@ -113,10 +113,13 @@ fn unish_loop(env_cmds: Vec<String>) {
                                 } else {
                                     Stdio::inherit()
                                 };
-                                let home_dir = env::home_dir().unwrap();
+                                /*
+                                                                let home_dir = env::home_dir().unwrap();
                                 let home_dir_u = home_dir.display();
                                 let command_pathv: String = format!("{home_dir_u}\\unify\\{command}");
                                 infoprint!("{}", command_pathv);
+                                 */
+
                                 let output = Command::new(command)
                                     .args(args)
                                     .stdin(stdin)
