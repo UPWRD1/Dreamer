@@ -11,7 +11,6 @@ use std::{
 };
 
 use super::resource::quit;
-use crate::helper::HOMEDIRL;
 /*
 fn unish_exec(command: &str, args: SplitWhitespace<'_>, previous_cmd: &mut Option<Child>, commands: &mut std::iter::Peekable<std::str::Split<'_, &str>>) {
 
@@ -64,7 +63,7 @@ fn unish_check_is_local(cmd: &str, env_cmds: &[String]) -> bool {
     env_cmds.contains(&cmd.to_string())
 }
 
-fn unish_loop(env_cmds: Vec<String>) {
+fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>) {
     loop {
         let curr_dir = env::current_dir();
         shellprint!("(~{}) [unify] @> ", curr_dir.unwrap().to_string_lossy());
@@ -116,7 +115,8 @@ fn unish_loop(env_cmds: Vec<String>) {
                                 let command_pathv: String = format!("{home_dir_u}\\unify\\{command}");
                                 infoprint!("{}", command_pathv);
                                  */
-                                let cmd_local = format!("{0}{1}", HOMEDIRL, command.clone());
+                                
+                                let cmd_local = format!("{0}\\.unify\\bins\\test\\{1}", home_dir.clone().unwrap(), command.clone());
                                 let output = Command::new(cmd_local)
                                     .args(args)
                                     .stdin(stdin)
@@ -165,8 +165,6 @@ fn unish_loop(env_cmds: Vec<String>) {
                     }
                 }
                 None => {
-                    errprint!("No Command!");
-                    quit()
                 }
             }
         }
@@ -178,10 +176,10 @@ fn unish_loop(env_cmds: Vec<String>) {
     }
 }
 
-pub fn init_shell(env_cmds: Vec<String>) {
+pub fn init_shell(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>) {
     infoprint!("Entering Virtual Environment...");
     //pause();
     //clear_term();
     infoprint!("Unify {0} (type 'exit()' to exit)", SELF_VERSION);
-    unish_loop(env_cmds);
+    unish_loop(env_cmds, home_dir);
 }

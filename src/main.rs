@@ -27,11 +27,11 @@ Error codes:
 pub fn cli() {
     // Main cli function
     let args: Vec<String> = env::args().collect(); // Argument collection
-                                                   //println!("{}", args.len()); // Parsi
+    let home_dir: Result<String, env::VarError> = env::var("HOME");
     pub const ENV_COMMANDS: Vec<String> = vec![];
     if args.clone().len() == 1 {
         //help();
-        init_shell(ENV_COMMANDS)
+        init_shell(ENV_COMMANDS, home_dir)
     } else {
         match args[1] {
             _ if argparse(&args, 1, INITCMD) => {
@@ -44,7 +44,7 @@ pub fn cli() {
                 help(args);
             }
             _ if argparse(&args, 1, LOADCMD) => {
-                load(args, ENV_COMMANDS);
+                load(args, ENV_COMMANDS, home_dir);
             }
             _ if argparse(&args, 1, LISTCMD) => {
                 let _ = list(args);

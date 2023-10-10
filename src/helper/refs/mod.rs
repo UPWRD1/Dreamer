@@ -46,6 +46,4 @@ pub const LISTCMD: Cmd = Cmd {
     aliases: ["list", "L", "--list", "-L"],
 };
 
-pub const AVAILABLE_CMDS: [&Cmd; 4] = [&HELPCMD, &LOADCMD, &RUNCMD, &INITCMD];
-
-pub const HOMEDIRL: &str = "C:\\Users\\s614627\\.unify\\bins\\test\\";
+pub const AVAILABLE_CMDS: [&Cmd; 5] = [&HELPCMD, &LOADCMD, &RUNCMD, &INITCMD, &LISTCMD];

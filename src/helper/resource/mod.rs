@@ -11,6 +11,9 @@ use std::io::Write;
 //use std::io::Read;
 use std::fmt::Arguments;
 use std::iter::*;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
 
 use super::refs::LISTCMD;
 use super::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
@@ -119,6 +122,12 @@ pub fn printusage(msg: &str) {
     } else if ostype == "linux" || ostype == "macos" {
         infoprint!("Usage: {0} {1}", " unify ".black(), msg.black());
     }
+}
+
+pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
 }
 
 pub fn printusagenb(msg: &str) {

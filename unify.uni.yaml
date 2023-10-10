@@ -1,0 +1,14 @@
+project: {
+  name: "asdf",
+  description: "test project",
+  version: "0.0.0",
+}
+
+deps:
+  tools:
+    - name: "motion.exe"
+      link: "https://github.com/MotionLang/motion/blob/main/bin/motion%20(1).exe"
+
+do:
+  run:
+    - echo hello world
