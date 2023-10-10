@@ -60,7 +60,7 @@ fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: &
 }
 */
 
-fn unish_check_is_local(cmd: &str, env_cmds: &Vec<String>) -> bool {
+fn unish_check_is_local(cmd: &str, env_cmds: &[String]) -> bool {
     env_cmds.contains(&cmd.to_string())
 }
 
