@@ -38,4 +38,14 @@ pub const LOADCMD: Cmd = Cmd {
     aliases: ["load", "l", "--load", "-l"],
 };
 
+pub const LISTCMD: Cmd = Cmd {
+    name: "list",
+    desc: "Lists all dependancies in a unifile",
+    longdesc: "Lists all dependancies in a unifile. If no filename is provided, unify will search the current directory for a unifile.",
+    usage: "list [filename]",
+    aliases: ["list", "L", "--list", "-L"],
+};
+
 pub const AVAILABLE_CMDS: [&Cmd; 4] = [&HELPCMD, &LOADCMD, &RUNCMD, &INITCMD];
+
+pub const HOMEDIRL: &str = "C:\\Users\\s614627\\.unify\\bins\\test\\";

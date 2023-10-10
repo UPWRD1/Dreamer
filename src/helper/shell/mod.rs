@@ -11,7 +11,7 @@ use std::{
 };
 
 use super::resource::quit;
-
+use crate::helper::HOMEDIRL;
 /*
 fn unish_exec(command: &str, args: SplitWhitespace<'_>, previous_cmd: &mut Option<Child>, commands: &mut std::iter::Peekable<std::str::Split<'_, &str>>) {
 
@@ -98,7 +98,7 @@ fn unish_loop(env_cmds: Vec<String>) {
 
                         command => {
                             if unish_check_is_local(command, &env_cmds) {
-                                infoprint!("LOCAL");
+                                //dbg!("LOCAL");
                                 //unish_exec(command, args, previous_cmd, commands);
                                 let stdin = previous_cmd
                                     .map_or(Stdio::inherit(), |output: Child| {
@@ -116,8 +116,8 @@ fn unish_loop(env_cmds: Vec<String>) {
                                 let command_pathv: String = format!("{home_dir_u}\\unify\\{command}");
                                 infoprint!("{}", command_pathv);
                                  */
-
-                                let output = Command::new(command)
+                                let cmd_local = format!("{0}{1}", HOMEDIRL, command.clone());
+                                let output = Command::new(cmd_local)
                                     .args(args)
                                     .stdin(stdin)
                                     .stdout(stdout)
@@ -182,9 +182,6 @@ pub fn init_shell(env_cmds: Vec<String>) {
     infoprint!("Entering Virtual Environment...");
     //pause();
     //clear_term();
-    infoprint!(
-        "Unify {0} (type 'exit()' to exit, 'help()' for help)",
-        SELF_VERSION
-    );
+    infoprint!("Unify {0} (type 'exit()' to exit)", SELF_VERSION);
     unish_loop(env_cmds);
 }

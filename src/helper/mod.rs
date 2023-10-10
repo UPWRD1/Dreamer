@@ -206,8 +206,7 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
                     Ok("OK".to_string())
                 }
                 &_ => {
-                    errprint!("File creation aborted.");
-                    usage_and_quit(INITCMD.name, "INVALID");
+                    usage_and_quit(INITCMD.name, "File Creation Aborted");
                     Ok("fail".to_string())
                 }
             }
@@ -239,6 +238,26 @@ fn load_exec(
             for tool in config.deps.tools {
                 env_cmds.push(tool.name.clone());
                 infoprint!("Installing {0} from {1}", tool.name, tool.link);
+                if cfg!(target_os = "windows") {
+                    let link = tool.link;
+                    let link_str = format!("{}", link);
+                    let namef = format!("{0}{1}", HOMEDIRL, tool.name);
+                    let args: Vec<&str> = vec!["/C", "curl", &link_str, "--output", &namef, "--silent"];
+                    let status = Command::new("cmd").args(args).status()?;
+                    if status.success() {
+                        //infoprint!("Command '{}' executed successfully", command);
+                    } else {
+                        errprint!("Error grabbing: '{}'", tool.name);
+                    }
+                } else {
+                    let link = tool.link;
+                    let args: Vec<&str> = vec!["-c", &link];
+                    let status = Command::new("cnd").args(args).status()?;
+                    if status.success() {
+                    } else {
+                        errprint!("Error executing command: '{}'", tool.name);
+                    }
+                }
             }
             Ok(env_cmds)
         }
@@ -285,6 +304,60 @@ pub fn load(argsv: Vec<String>, env_cmds: Vec<String>) {
         Ok(env_cmds) => {
             init_shell(env_cmds.clone());
         }
+    }
+}
+
+pub fn list_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
+    let reader: BufReader<File> = BufReader::new(v_file);
+    // Parse the YAML into PluConfig struct
+    let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
+    match config {
+        Err(_) => {
+            errprint!("Invalid Config file '{}'", filepath);
+            Err("Invalid Config".into())
+        }
+
+        Ok(config) => {
+            infoprint!("Dependancies for {}:", filepath);
+            let mut num = 1;
+            for tool in config.deps.tools {
+                println!("\t ({0}) {1}",num, tool.name);
+                num += 1;
+            }
+            Ok(())
+        }
+    }
+}
+
+pub fn list(argsv: Vec<String>)  -> Result<(), Box<dyn Error>> {
+    if check_arg_len(argsv.clone(), 2) {
+        usage_and_quit(LISTCMD.name, "Missing Filename!")
+    }
+    // Read the .plu.yaml file
+    let index_to_open = 2;
+    if index_to_open < argsv.len() {
+        let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yml";
+        let file: Result<File, std::io::Error> = File::open(filepath.clone());
+        match file {
+            Ok(v_file) => list_exec(v_file, filepath),
+            Err(_error) => {
+                let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yaml";
+                let file: Result<File, std::io::Error> = File::open(filepath.clone());
+                match file {
+                    Ok(v_file) => list_exec(v_file, filepath),
+                    Err(_error) => {
+                        errprint!("Cannot find file '{}'", filepath);
+                        infoprint!(
+                            "Help: Try 'unify init {}' to create a new uni.yaml file.",
+                            filepath
+                        );
+                        Err("Cannot find file".into())
+                    }
+                }
+            }
+        }
+    } else {
+        Err("Bad File".into())
     }
 }
 

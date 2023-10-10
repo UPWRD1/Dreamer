@@ -12,6 +12,7 @@ use std::io::Write;
 use std::fmt::Arguments;
 use std::iter::*;
 
+use super::refs::LISTCMD;
 use super::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
 
 macro_rules! errprint {
@@ -98,7 +99,7 @@ macro_rules! shellprint {
         print!("    {0} {1} ", "[>]".yellow().bold(), format_args!($($arg)*))
     }};
 }
-
+/*
 pub fn throw_fatal(msg: &str) {
     errprint!(
         "{0}{1}{2}",
@@ -110,7 +111,7 @@ pub fn throw_fatal(msg: &str) {
             .bold()
     );
 }
-
+*/
 pub fn printusage(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
@@ -213,6 +214,7 @@ pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
         "run" => Ok(RUNCMD),
         "init" => Ok(INITCMD),
         "load" => Ok(LOADCMD),
+        "list" => Ok(LISTCMD),
         &_ => Err("INVALID CMD".to_string()),
     }
 }

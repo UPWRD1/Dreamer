@@ -7,11 +7,13 @@ use std::env::{self};
 use std::iter::*;
 
 mod helper;
-use helper::{argparse, help, init, invalid_args_notify, load, run};
+use helper::{argparse, help, init, invalid_args_notify, load, run, list};
 
 use helper::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
 
 use helper::shell::init_shell;
+
+use crate::helper::refs::LISTCMD;
 
 /*
 Error codes:
@@ -43,6 +45,9 @@ pub fn cli() {
             }
             _ if argparse(&args, 1, LOADCMD) => {
                 load(args, ENV_COMMANDS);
+            }
+            _ if argparse(&args, 1, LISTCMD) => {
+                let _ = list(args);
             }
             _ => invalid_args_notify(args), // Create new plufile
         }
