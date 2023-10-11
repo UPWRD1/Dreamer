@@ -29,7 +29,11 @@ pub fn cli() {
     let home_dir: Result<String, env::VarError> = env::var("HOME");
     pub const ENV_COMMANDS: Vec<String> = vec![];
     if args.clone().len() == 1 {
-        let _ = load(args, ENV_COMMANDS, home_dir);
+        let mut n_args = args.clone();
+        n_args.push("".to_string());
+        n_args.insert(2, "unify".to_string());
+        let _ = run(n_args.clone());
+        let _ = load(n_args.clone(), ENV_COMMANDS, home_dir);
     } else {
         match args[1] {
             _ if argparse(&args, 1, INITCMD) => {

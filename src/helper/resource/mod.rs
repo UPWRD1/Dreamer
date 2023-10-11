@@ -244,6 +244,6 @@ pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), 
             }
         }
     } else {
-        Err(("Bad File".to_string(),"Bad File".to_string() ))
+        Err(("Not enough Arguments!".to_string(), "Invalid Args".to_string() ))
     }
 }

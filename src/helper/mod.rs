@@ -63,6 +63,16 @@ pub struct UniConfig {
     deps: DepsConfig,
 }
 
+pub fn continue_prompt() {
+    match questionprint!(" Do you want to continue? (Y/N)").as_str() {
+        "y" | "Y" => {
+        }
+        &_ => {
+            quit();
+        }
+    }
+}
+
 fn usage(cmd: &str) {
     printusage(matchcmd(cmd).unwrap().usage);
 }
@@ -77,19 +87,17 @@ fn createfile(ufile_name: String) -> Result<std::string::String, std::string::St
     ufile
         .write_all(
             b"project: {
-  name: \"test project\",
-  description: \"test project\",
+  name: \"\",
+  description: \"\",
   version: \"0.0.0\",
 }
 
-deps:
-  tools:
-    - name: \"motion.exe\"
-      link: \"https://github.com/MotionLang/motion/blob/main/bin/motion%20(1).exe\"
-
 do:
   run:
-    - echo hello world",
+    - echo hello world
+
+deps:
+  tools:",
         )
         .expect("[!] Error while writing to file");
 
@@ -193,16 +201,10 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
 
         if Path::new(ufile_name_str).exists() {
             errprint!("File {} already Exists!", ufile_name);
-            match questionprint!("Do you want to continue? (Y/N)").as_str() {
-                "y" | "Y" => {
-                    let _ = createfile(ufile_name);
-                    Ok("OK".to_string())
-                }
-                &_ => {
-                    usage_and_quit(INITCMD.name, "File Creation Aborted");
-                    Ok("fail".to_string())
-                }
-            }
+            continue_prompt();
+            let _ = createfile(ufile_name);
+            Ok("OK".to_string())
+
         } else {
             let _ = createfile(ufile_name);
             Ok("OK".to_string())
@@ -244,11 +246,13 @@ fn tool_install(
                         //infoprint!("Command '{}' executed successfully", command);
                     } else {
                         errprint!("Error grabbing: '{}'", tool.name);
+                        continue_prompt();
                         return Err("Error grabbing".into());
                     }
                     //infoprint!("Command '{}' executed successfully", command);
                 } else {
                     errprint!("Error grabbing: '{}'", tool.name);
+                    continue_prompt();
                     Err("Error grabbing".into())
                 }
             }
@@ -322,24 +326,25 @@ fn load_deps(
     home_dir: Result<String, env::VarError>,
 ) -> Result<(Vec<String>, u64), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
-        usage_and_quit(LOADCMD.name, "Missing Filename!")
+        usage_and_quit(LOADCMD.name, "Missing Filename!");
+        return Err("Bad File".into())
+    } else {
+        let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2) {
+            Ok(v_file) => {
+                let result = load_exec(v_file.0, v_file.1, env_cmds.to_vec(), home_dir);
+                return result;
+                //Ok(result)
+            }
+            Err(file) => {
+                errprint!("Cannot find file '{}'", file.1);
+                infoprint!(
+                    "Help: Try 'unify init {}' to create a new uni.yaml file.",
+                    file.1
+                );
+                Err(())
+            }
+        };
     }
-    let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2) {
-        Ok(v_file) => {
-
-            let result = load_exec(v_file.0, v_file.1, env_cmds.to_vec(), home_dir);
-            return result
-            //Ok(result)
-        },
-        Err(file) => {
-            errprint!("Cannot find file '{}'", file.1);
-            infoprint!(
-                "Help: Try 'unify init {}' to create a new uni.yaml file.",
-                file.1
-            );
-            Err(())
-        }
-    };
     Err("Bad File".into())
 }
 
@@ -385,7 +390,7 @@ pub fn list(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
         Ok(v_file) => {
             let result = list_exec(v_file.0, v_file.1);
             Ok(result)
-        },
+        }
         Err(file) => {
             errprint!("Cannot find file '{}'", file.1);
             infoprint!(
@@ -408,13 +413,14 @@ fn add_exec(filepath: String, depname: &String) -> Result<(), Box<dyn Error>> {
         .open(filepath)
         .expect("cannot open file");
 
-        let cont = format!("
+    let cont = format!(
+        "
     - name: \"{0}\"
-      link: \"{1}\"", depname, link);
+      link: \"{1}\"",
+        depname, link
+    );
     // Write to a file
-    data_file
-        .write(cont.as_bytes())
-        .expect("write failed");
+    data_file.write(cont.as_bytes()).expect("write failed");
 
     println!("Appended content to a file");
 
@@ -431,7 +437,7 @@ pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
         Ok(v_file) => {
             let result = add_exec(v_file.1, dep_to_get);
             Ok(result)
-        },
+        }
         Err(file) => {
             errprint!("Cannot find file '{}'", file.1);
             infoprint!(

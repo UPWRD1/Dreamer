@@ -1,14 +1,16 @@
 project: {
-  name: "asdf",
+  name: "asdfasdf",
   description: "test project",
   version: "0.0.0",
 }
 
-deps:
-  tools:
-    - name: "motion.exe"
-      link: "https://github.com/MotionLang/motion/blob/main/bin/motion%20(1).exe"
-
 do:
   run:
     - echo hello world
+
+deps:
+  tools:
+    - name: "motion"
+      link: "https://github.com/MotionLang/motion/releases/download/v1.0.0/motion"
+    - name: "test"
+      link: "asdf"
