@@ -236,32 +236,69 @@ fn tool_install(
     infoprint!("Installing {0} from {1}", tool.name, tool.link);
     let link = tool.link;
     let link_str = format!("{}", link);
-    let dir_loc = format!("{0}/.unify/bins/{1}/", home_dir.as_mut().unwrap(), hashname);
-    match fs::create_dir_all(&dir_loc) {
-        Ok(..) => {
-            let namef = format!("{0}{1}", dir_loc, tool.name);
-            let args: Vec<&str> = vec!["-c", "curl", &link_str, "--output", &namef, "--silent"];
-            println!("{:?}", args);
-            let status = Command::new("sh").args(args).status()?;
-            if status.success() {
-                let args2: Vec<&str> = vec!["-c", "chmod","a+x", &namef];
-                let status2 = Command::new("sh").args(args2).status()?;
-                if status2.success() {
-                    return Ok(())
+    if cfg!(windows) {
+        let dir_loc = format!(
+            "{0}\\.unify\\bins\\{1}\\",
+            home_dir.as_mut().unwrap(),
+            hashname
+        );
+        match fs::create_dir_all(&dir_loc) {
+            Ok(..) => {
+                let namef = format!("{0}{1}", dir_loc, tool.name);
+                let args: Vec<&str> = vec!["/C", "curl", &link_str, "--output", &namef, "--silent"];
+                println!("{:?}", args);
+
+                let status = Command::new("cmd").args(args).status()?;
+                if status.success() {
+                    let args2: Vec<&str> = vec!["/C", "chmod", "a+x", &namef];
+                    let status2 = Command::new("cmd").args(args2).status()?;
+                    if status2.success() {
+                        return Ok(());
+                        //infoprint!("Command '{}' executed successfully", command);
+                    } else {
+                        errprint!("Error grabbing: '{}'", tool.name);
+                        return Err("Error grabbing".into());
+                    }
                     //infoprint!("Command '{}' executed successfully", command);
                 } else {
                     errprint!("Error grabbing: '{}'", tool.name);
-                    return Err("Error grabbing".into())
+                    Err("Error grabbing".into())
                 }
-                //infoprint!("Command '{}' executed successfully", command);
-            } else {
-                errprint!("Error grabbing: '{}'", tool.name);
-                Err("Error grabbing".into())
+            }
+            Err(..) => {
+                errprint!("Error creating dir");
+                Err("Error creating dir".into())
             }
         }
-        Err(..) => {
-            errprint!("Error creating dir");
-            Err("Error creating dir".into())
+    } else {
+        let dir_loc = format!("{0}/.unify/bins/{1}/", home_dir.as_mut().unwrap(), hashname);
+        match fs::create_dir_all(&dir_loc) {
+            Ok(..) => {
+                let namef = format!("{0}{1}", dir_loc, tool.name);
+                let args: Vec<&str> = vec!["-c", "curl", &link_str, "--output", &namef, "--silent"];
+                println!("{:?}", args);
+
+                let status = Command::new("sh").args(args).status()?;
+                if status.success() {
+                    let args2: Vec<&str> = vec!["-c", "chmod", "a+x", &namef];
+                    let status2 = Command::new("sh").args(args2).status()?;
+                    if status2.success() {
+                        return Ok(());
+                        //infoprint!("Command '{}' executed successfully", command);
+                    } else {
+                        errprint!("Error grabbing: '{}'", tool.name);
+                        return Err("Error grabbing".into());
+                    }
+                    //infoprint!("Command '{}' executed successfully", command);
+                } else {
+                    errprint!("Error grabbing: '{}'", tool.name);
+                    Err("Error grabbing".into())
+                }
+            }
+            Err(..) => {
+                errprint!("Error creating dir");
+                Err("Error creating dir".into())
+            }
         }
     }
 }
@@ -352,7 +389,7 @@ pub fn list_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
             infoprint!("Dependancies for {}:", filepath);
             let mut num = 1;
             for tool in config.deps.tools {
-                println!("\t ({0}) {1}", num, tool.name);
+                println!("\t {0}: {1}", num, tool.name);
                 num += 1;
             }
             Ok(())
