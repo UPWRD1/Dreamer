@@ -316,7 +316,7 @@ fn load_exec(
     }
 }
 
-pub fn load_deps(
+fn load_deps(
     argsv: Vec<String>,
     env_cmds: &[String],
     home_dir: Result<String, env::VarError>,
@@ -356,7 +356,7 @@ pub fn load(argsv: Vec<String>, env_cmds: Vec<String>, home_dir: Result<String, 
 
 fn list_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
-    // Parse the YAML into PluConfig struct
+    // Parse the YAML
     let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
@@ -398,11 +398,50 @@ pub fn list(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     Err("Bad File".into())
 }
 
-pub fn add(argsv: Vec<String>) {
+fn add_exec(filepath: String, depname: &String) -> Result<(), Box<dyn Error>> {
+    let link = questionprint!("Enter Link for '{}':", depname);
+    println!("{depname}:{link}");
+    println!("{filepath}");
+    // Open a file with append option
+    let mut data_file = std::fs::OpenOptions::new()
+        .append(true)
+        .open(filepath)
+        .expect("cannot open file");
+
+        let cont = format!("
+    - name: \"{0}\"
+      link: \"{1}\"", depname, link);
+    // Write to a file
+    data_file
+        .write(cont.as_bytes())
+        .expect("write failed");
+
+    println!("Appended content to a file");
+
+    Ok(())
+}
+
+pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 3) {
         usage_and_quit(ADDCMD.name, "Missing Arguments!")
     }
-    let _dep_to_get = &argsv[2];
+    let dep_to_get = &argsv[2];
+
+    let _ = match read_file(&argsv, 3) {
+        Ok(v_file) => {
+            let result = add_exec(v_file.1, dep_to_get);
+            Ok(result)
+        },
+        Err(file) => {
+            errprint!("Cannot find file '{}'", file.1);
+            infoprint!(
+                "Help: Try 'unify init {}' to create a new uni.yaml file.",
+                file.1
+            );
+            Err(())
+        }
+    };
+    Err("Bad File".into())
 }
 
 pub fn invalid_args_notify(args: Vec<String>) {
