@@ -63,7 +63,7 @@ fn unish_check_is_local(cmd: &str, env_cmds: &[String]) -> bool {
     env_cmds.contains(&cmd.to_string())
 }
 
-fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>) {
+fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, hashname: u64) {
     loop {
         let curr_dir = env::current_dir();
         shellprint!("(~{}) [unify] @> ", curr_dir.unwrap().to_string_lossy());
@@ -97,7 +97,7 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>) {
 
                         command => {
                             if unish_check_is_local(command, &env_cmds) {
-                                //dbg!("LOCAL");
+                                println!("LOCAL");
                                 //unish_exec(command, args, previous_cmd, commands);
                                 let stdin = previous_cmd
                                     .map_or(Stdio::inherit(), |output: Child| {
@@ -116,7 +116,8 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>) {
                                 infoprint!("{}", command_pathv);
                                  */
                                 
-                                let cmd_local = format!("{0}\\.unify\\bins\\test\\{1}", home_dir.clone().unwrap(), command.clone());
+                                let cmd_local = format!("{0}/.unify/bins/{1}/{2}", home_dir.clone().unwrap(), hashname, command);
+                                println!("{}", cmd_local);
                                 let output = Command::new(cmd_local)
                                     .args(args)
                                     .stdin(stdin)
@@ -176,10 +177,10 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>) {
     }
 }
 
-pub fn init_shell(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>) {
+pub fn init_shell(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, hashname: u64) {
     infoprint!("Entering Virtual Environment...");
     //pause();
     //clear_term();
     infoprint!("Unify {0} (type 'exit()' to exit)", SELF_VERSION);
-    unish_loop(env_cmds, home_dir);
+    unish_loop(env_cmds, home_dir, hashname);
 }

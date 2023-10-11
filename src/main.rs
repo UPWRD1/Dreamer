@@ -11,8 +11,6 @@ use helper::{argparse, help, init, invalid_args_notify, load, run, list};
 
 use helper::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
 
-use helper::shell::init_shell;
-
 use crate::helper::refs::LISTCMD;
 
 /*
@@ -30,8 +28,7 @@ pub fn cli() {
     let home_dir: Result<String, env::VarError> = env::var("HOME");
     pub const ENV_COMMANDS: Vec<String> = vec![];
     if args.clone().len() == 1 {
-        //help();
-        init_shell(ENV_COMMANDS, home_dir)
+        let _ = load(args, ENV_COMMANDS, home_dir);
     } else {
         match args[1] {
             _ if argparse(&args, 1, INITCMD) => {

@@ -75,7 +75,8 @@ fn createfile(ufile_name: String) -> Result<std::string::String, std::string::St
     infoprint!("Creating unifile: {}", ufile_name);
     let mut ufile = File::create(ufile_name).expect("[!] Error encountered while creating file!");
     ufile
-    .write_all(b"project: {
+        .write_all(
+            b"project: {
   name: \"test project\",
   description: \"test project\",
   version: \"0.0.0\",
@@ -88,7 +89,8 @@ deps:
 
 do:
   run:
-    - echo hello world")
+    - echo hello world",
+        )
         .expect("[!] Error while writing to file");
 
     Ok("File Created!".to_string())
@@ -224,12 +226,52 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
     }
 }
 
+fn tool_install(
+    tool: Tool,
+    hashname: u64,
+    env_cmds: &mut Vec<String>,
+    home_dir: &mut Result<String, env::VarError>,
+) -> Result<(), Box<dyn Error>> {
+    env_cmds.push(tool.name.clone());
+    infoprint!("Installing {0} from {1}", tool.name, tool.link);
+    let link = tool.link;
+    let link_str = format!("{}", link);
+    let dir_loc = format!("{0}/.unify/bins/{1}/", home_dir.as_mut().unwrap(), hashname);
+    match fs::create_dir_all(&dir_loc) {
+        Ok(..) => {
+            let namef = format!("{0}{1}", dir_loc, tool.name);
+            let args: Vec<&str> = vec!["-c", "curl", &link_str, "--output", &namef, "--silent"];
+            println!("{:?}", args);
+            let status = Command::new("sh").args(args).status()?;
+            if status.success() {
+                let args2: Vec<&str> = vec!["-c", "chmod","a+x", &namef];
+                let status2 = Command::new("sh").args(args2).status()?;
+                if status2.success() {
+                    return Ok(())
+                    //infoprint!("Command '{}' executed successfully", command);
+                } else {
+                    errprint!("Error grabbing: '{}'", tool.name);
+                    return Err("Error grabbing".into())
+                }
+                //infoprint!("Command '{}' executed successfully", command);
+            } else {
+                errprint!("Error grabbing: '{}'", tool.name);
+                Err("Error grabbing".into())
+            }
+        }
+        Err(..) => {
+            errprint!("Error creating dir");
+            Err("Error creating dir".into())
+        }
+    }
+}
+
 fn load_exec(
     v_file: File,
     filepath: String,
     mut env_cmds: Vec<String>,
     mut home_dir: Result<String, env::VarError>,
-) -> Result<Vec<String>, Box<dyn Error>> {
+) -> Result<(Vec<String>, u64), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into DepConfig struct
     let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
@@ -242,48 +284,9 @@ fn load_exec(
             infoprint!("Getting dependancies from file: '{}': \n", filepath);
             let hashname = calculate_hash(&config.project.name);
             for tool in config.deps.tools {
-                env_cmds.push(tool.name.clone());
-                infoprint!("Installing {0} from {1}", tool.name, tool.link);
-                if cfg!(target_os = "windows") {
-                    let link = tool.link;
-                    let link_str = format!("{}", link);
-                    let dir_loc = format!(
-                        "{0}/.unify/bins/{1}/",
-                        home_dir.as_mut().unwrap(),
-                        hashname
-                    );
-                    match fs::create_dir_all(&dir_loc) {
-                        Ok(..) => {
-                            let namef = format!("{0}{1}", dir_loc, tool.name);
-                            let args: Vec<&str> =
-                                vec!["/C", "curl", &link_str, "--output", &namef, "--silent"];
-                            println!("{:?}", args);
-                            let status = Command::new("cmd").args(args).status()?;
-                            if status.success() {
-                                //infoprint!("Command '{}' executed successfully", command);
-                            } else {
-                                errprint!("Error grabbing: '{}'", tool.name);
-                            }
-                        }
-                        Err(..) => {
-                            errprint!("Error creating dir");
-                        }
-                    }
-                } else {
-                    let link = tool.link;
-                    let link_str = format!("{}", link);
-                    let namef = format!("{0}{1}", home_dir.as_mut().unwrap(), tool.name);
-
-                    let args: Vec<&str> =
-                        vec!["-c", "curl", &link_str, "--output", &namef, "--silent"];
-                    let status = Command::new("sh").args(args).status()?;
-                    if status.success() {
-                    } else {
-                        errprint!("Error executing command: '{}'", tool.name);
-                    }
-                }
+                let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir);
             }
-            Ok(env_cmds)
+            Ok((env_cmds, hashname))
         }
     }
 }
@@ -292,7 +295,7 @@ pub fn load_deps(
     argsv: Vec<String>,
     env_cmds: &[String],
     home_dir: Result<String, env::VarError>,
-) -> Result<Vec<String>, Box<dyn Error>> {
+) -> Result<(Vec<String>, u64), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LOADCMD.name, "Missing Filename!")
     }
@@ -329,8 +332,8 @@ pub fn load(argsv: Vec<String>, env_cmds: Vec<String>, home_dir: Result<String, 
         Err(_) => {
             quit();
         }
-        Ok(env_cmds) => {
-            init_shell(env_cmds.clone(), home_dir.clone());
+        Ok(result) => {
+            init_shell(result.0.clone(), home_dir.clone(), result.1);
         }
     }
 }
