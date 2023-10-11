@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 //use std::env;
 use std::error::Error;
 //use std::fs::metadata;
-use std::env;
+use std::env::{self};
 use std::fs::{self, File};
 use std::io::BufReader;
 use std::io::Write;
@@ -28,7 +28,7 @@ use std::path::Path;
 use std::process::Command;
 
 use self::refs::AVAILABLE_CMDS;
-use self::resource::{extrahelp, matchcmd};
+use self::resource::{extrahelp, matchcmd, read_file};
 use self::shell::init_shell;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
@@ -149,32 +149,19 @@ pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(RUNCMD.name, "Missing Filename!")
     }
-    // Read the .plu.yaml file
-    let index_to_open = 2;
-    if index_to_open < argsv.len() {
-        let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yml";
-        let file: Result<File, std::io::Error> = File::open(filepath.clone());
-        match file {
-            Ok(v_file) => run_exec(v_file, filepath),
-            Err(_error) => {
-                let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yaml";
-                let file: Result<File, std::io::Error> = File::open(filepath.clone());
-                match file {
-                    Ok(v_file) => run_exec(v_file, filepath),
-                    Err(_error) => {
-                        errprint!("Cannot find file '{}'", filepath);
-                        infoprint!(
-                            "Help: Try 'unify init {}' to create a new uni.yaml file.",
-                            filepath
-                        );
-                        Err("Cannot find file".into())
-                    }
-                }
-            }
+
+    let _ = match read_file(&argsv, 2) {
+        Ok(v_file) => run_exec(v_file.0, v_file.1),
+        Err(file) => {
+            errprint!("Cannot find file '{}'", file.1);
+            infoprint!(
+                "Help: Try 'unify init {}' to create a new uni.yaml file.",
+                file.1
+            );
+            Ok(())
         }
-    } else {
-        Err("Bad File".into())
-    }
+    };
+    Ok(())
 }
 
 pub fn help(argsv: Vec<String>) {
@@ -246,7 +233,7 @@ fn tool_install(
             Ok(..) => {
                 let namef = format!("{0}{1}", dir_loc, tool.name);
                 let args: Vec<&str> = vec!["/C", "curl", &link_str, "--output", &namef, "--silent"];
-                println!("{:?}", args);
+                //println!("{:?}", args);
 
                 let status = Command::new("cmd").args(args).status()?;
                 if status.success() {
@@ -323,7 +310,8 @@ fn load_exec(
             for tool in config.deps.tools {
                 let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir);
             }
-            Ok((env_cmds, hashname))
+            let result = (env_cmds, hashname);
+            Ok(result)
         }
     }
 }
@@ -336,32 +324,23 @@ pub fn load_deps(
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LOADCMD.name, "Missing Filename!")
     }
-    // Read the .uni.yaml file
-    let index_to_open = 2;
-    if index_to_open < argsv.len() {
-        let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yml";
-        let file: Result<File, std::io::Error> = File::open(filepath.clone());
-        match file {
-            Err(_error) => {
-                let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yaml";
-                let file: Result<File, std::io::Error> = File::open(filepath.clone());
-                match file {
-                    Ok(v_file) => load_exec(v_file, filepath, env_cmds.to_vec(), home_dir),
-                    Err(_error) => {
-                        errprint!("Cannot find file '{}'", filepath);
-                        infoprint!(
-                            "Help: Try 'unify init {}' to create a new uni.yaml file.",
-                            filepath
-                        );
-                        Err("Cannot find file".into())
-                    }
-                }
-            }
-            Ok(v_file) => load_exec(v_file, filepath, env_cmds.to_vec(), home_dir),
+    let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2) {
+        Ok(v_file) => {
+
+            let result = load_exec(v_file.0, v_file.1, env_cmds.to_vec(), home_dir);
+            return result
+            //Ok(result)
+        },
+        Err(file) => {
+            errprint!("Cannot find file '{}'", file.1);
+            infoprint!(
+                "Help: Try 'unify init {}' to create a new uni.yaml file.",
+                file.1
+            );
+            Err(())
         }
-    } else {
-        Err("Bad File".into())
-    }
+    };
+    Err("Bad File".into())
 }
 
 pub fn load(argsv: Vec<String>, env_cmds: Vec<String>, home_dir: Result<String, env::VarError>) {
@@ -375,7 +354,7 @@ pub fn load(argsv: Vec<String>, env_cmds: Vec<String>, home_dir: Result<String, 
     }
 }
 
-pub fn list_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
+fn list_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into PluConfig struct
     let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
@@ -401,32 +380,29 @@ pub fn list(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LISTCMD.name, "Missing Filename!")
     }
-    // Read the .plu.yaml file
-    let index_to_open = 2;
-    if index_to_open < argsv.len() {
-        let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yml";
-        let file: Result<File, std::io::Error> = File::open(filepath.clone());
-        match file {
-            Ok(v_file) => list_exec(v_file, filepath),
-            Err(_error) => {
-                let filepath = argsv[index_to_open].to_string().to_owned() + ".uni.yaml";
-                let file: Result<File, std::io::Error> = File::open(filepath.clone());
-                match file {
-                    Ok(v_file) => list_exec(v_file, filepath),
-                    Err(_error) => {
-                        errprint!("Cannot find file '{}'", filepath);
-                        infoprint!(
-                            "Help: Try 'unify init {}' to create a new uni.yaml file.",
-                            filepath
-                        );
-                        Err("Cannot find file".into())
-                    }
-                }
-            }
+
+    let _ = match read_file(&argsv, 2) {
+        Ok(v_file) => {
+            let result = list_exec(v_file.0, v_file.1);
+            Ok(result)
+        },
+        Err(file) => {
+            errprint!("Cannot find file '{}'", file.1);
+            infoprint!(
+                "Help: Try 'unify init {}' to create a new uni.yaml file.",
+                file.1
+            );
+            Err(())
         }
-    } else {
-        Err("Bad File".into())
+    };
+    Err("Bad File".into())
+}
+
+pub fn add(argsv: Vec<String>) {
+    if check_arg_len(argsv.clone(), 3) {
+        usage_and_quit(ADDCMD.name, "Missing Arguments!")
     }
+    let _dep_to_get = &argsv[2];
 }
 
 pub fn invalid_args_notify(args: Vec<String>) {

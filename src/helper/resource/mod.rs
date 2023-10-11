@@ -13,8 +13,7 @@ use std::fmt::Arguments;
 use std::iter::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-
-
+use std::fs::File;
 use super::refs::LISTCMD;
 use super::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
 
@@ -225,5 +224,26 @@ pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
         "load" => Ok(LOADCMD),
         "list" => Ok(LISTCMD),
         &_ => Err("INVALID CMD".to_string()),
+    }
+}
+
+pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), (String, String)> {
+    if to_open < argsv.len() {
+        let filepath = argsv[to_open].to_string().to_owned() + ".uni.yml";
+        let file: Result<File, std::io::Error> = File::open(filepath.clone());
+        match file {
+            Ok(v_file) => Ok((v_file, filepath)),
+            Err(_error) => {
+                let filepath = argsv[to_open].to_string().to_owned() + ".uni.yaml";
+                let file: Result<File, std::io::Error> = File::open(filepath.clone());
+                match file {
+                    Ok(v_file) => Ok((v_file, filepath)),
+                    Err(error) => Err((error.to_string(), filepath)),
+                    
+                }
+            }
+        }
+    } else {
+        Err(("Bad File".to_string(),"Bad File".to_string() ))
     }
 }

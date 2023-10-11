@@ -11,7 +11,8 @@ use helper::{argparse, help, init, invalid_args_notify, load, run, list};
 
 use helper::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
 
-use crate::helper::refs::LISTCMD;
+use crate::helper::add;
+use crate::helper::refs::{LISTCMD, ADDCMD};
 
 /*
 Error codes:
@@ -45,6 +46,9 @@ pub fn cli() {
             }
             _ if argparse(&args, 1, LISTCMD) => {
                 let _ = list(args);
+            }
+            _ if argparse(&args, 1, ADDCMD) => {
+                let _ = add(args);
             }
             _ => invalid_args_notify(args), // Create new plufile
         }

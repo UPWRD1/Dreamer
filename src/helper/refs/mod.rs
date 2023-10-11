@@ -46,4 +46,12 @@ pub const LISTCMD: Cmd = Cmd {
     aliases: ["list", "L", "--list", "-L"],
 };
 
-pub const AVAILABLE_CMDS: [&Cmd; 5] = [&HELPCMD, &LOADCMD, &RUNCMD, &INITCMD, &LISTCMD];
+pub const ADDCMD: Cmd = Cmd {
+    name: "add",
+    desc: "Adds a dependancy to a unifile",
+    longdesc: "Adds a dependancy to a unifile. If no filename is provided, unify will search the current directory for a unifile.",
+    usage: "add <dependancy> [filename]",
+    aliases: ["add", "a", "--add", "-a"],
+};
+
+pub const AVAILABLE_CMDS: [&Cmd; 6] = [&HELPCMD, &LOADCMD, &RUNCMD, &INITCMD, &LISTCMD, &ADDCMD];
