@@ -5,7 +5,7 @@ extern crate serde;
 extern crate serde_yaml;
 
 #[macro_use]
-mod resource;
+pub mod resource;
 pub mod shell;
 use crate::helper::resource::{
     calculate_hash, check_arg_len, clear_term, input_fmt, printhelp, printusage, printusagenb,
@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 //use std::env;
 use std::error::Error;
 //use std::fs::metadata;
+use std::path::PathBuf;
 use std::env::{self};
 use std::fs::{self, File};
 use std::io::BufReader;
@@ -65,8 +66,7 @@ pub struct UniConfig {
 
 pub fn continue_prompt() {
     match questionprint!(" Do you want to continue? (Y/N)").as_str() {
-        "y" | "Y" => {
-        }
+        "y" | "Y" => {}
         &_ => {
             quit();
         }
@@ -204,7 +204,6 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
             continue_prompt();
             let _ = createfile(ufile_name);
             Ok("OK".to_string())
-
         } else {
             let _ = createfile(ufile_name);
             Ok("OK".to_string())
@@ -265,14 +264,16 @@ fn tool_install(
         let dir_loc = format!("{0}/.unify/bins/{1}/", home_dir.as_mut().unwrap(), hashname);
         match fs::create_dir_all(&dir_loc) {
             Ok(..) => {
+                let link_str_f = format!("{link_str}");
                 let namef = format!("{0}{1}", dir_loc, tool.name);
-                let args: Vec<&str> = vec!["-c", "curl", &link_str, "--output", &namef, "--silent"];
+                let args: Vec<&str> =
+                    vec!["-c", "curl", &link_str_f, "--output", &namef, "--silent"];
                 println!("{:?}", args);
+                let status = Command::new("bash").args(args).status()?;
 
-                let status = Command::new("sh").args(args).status()?;
                 if status.success() {
                     let args2: Vec<&str> = vec!["-c", "chmod", "a+x", &namef];
-                    let status2 = Command::new("sh").args(args2).status()?;
+                    let status2 = Command::new("bash").args(args2).status()?;
                     if status2.success() {
                         return Ok(());
                         //infoprint!("Command '{}' executed successfully", command);
@@ -309,7 +310,7 @@ fn load_exec(
             Err("Invalid Config".into())
         }
         Ok(config) => {
-            infoprint!("Getting dependancies from file: '{}': \n", filepath);
+            infoprint!("Getting dependancies from file: '{}'", filepath);
             let hashname = calculate_hash(&config.project.name);
             for tool in config.deps.tools {
                 let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir);
@@ -327,8 +328,11 @@ fn load_deps(
 ) -> Result<(Vec<String>, u64), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LOADCMD.name, "Missing Filename!");
-        return Err("Bad File".into())
+        return Err("Bad File".into());
     } else {
+        let _ = list(argsv.clone(), 1);
+        infoprint!("This action will download the above, and run any tasks included.");
+        continue_prompt();
         let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2) {
             Ok(v_file) => {
                 let result = load_exec(v_file.0, v_file.1, env_cmds.to_vec(), home_dir);
@@ -359,7 +363,7 @@ pub fn load(argsv: Vec<String>, env_cmds: Vec<String>, home_dir: Result<String, 
     }
 }
 
-fn list_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
+fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML
     let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
@@ -369,26 +373,38 @@ fn list_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
             Err("Invalid Config".into())
         }
 
-        Ok(config) => {
-            infoprint!("Dependancies for {}:", filepath);
-            let mut num = 1;
-            for tool in config.deps.tools {
-                println!("\t {0}: {1}", num, tool.name);
-                num += 1;
+        Ok(config) => match way {
+            1 => {
+                infoprint!("'{}' requires the following dependancies:", filepath);
+                let mut num = 1;
+                for tool in config.deps.tools {
+                    println!("\t {0}: {1}", num, tool.name);
+                    num += 1;
+                }
+                Ok(())
             }
-            Ok(())
-        }
+
+            0 | _  => {
+                infoprint!("Dependancies for {}:", filepath);
+                let mut num = 1;
+                for tool in config.deps.tools {
+                    println!("\t {0}: {1}", num, tool.name);
+                    num += 1;
+                }
+                Ok(())
+            }
+        },
     }
 }
 
-pub fn list(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
+pub fn list(argsv: Vec<String>, way: usize) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LISTCMD.name, "Missing Filename!")
     }
 
     let _ = match read_file(&argsv, 2) {
         Ok(v_file) => {
-            let result = list_exec(v_file.0, v_file.1);
+            let result = list_exec(v_file.0, v_file.1, way);
             Ok(result)
         }
         Err(file) => {
@@ -463,4 +479,26 @@ pub fn invalid_args_notify(args: Vec<String>) {
 pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
     // Parse arguments
     cmd.aliases.contains(&argsv[pos].as_str())
+}
+
+pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+    let paths = std::fs::read_dir(dir)?
+        // Filter out all those directory entries which couldn't be read
+        .filter_map(|res| res.ok())
+        // Map the directory entries to paths
+        .map(|dir_entry| dir_entry.path())
+        // Filter out all paths with extensions other than `csv`
+        .filter_map(|path| {
+            if path.extension().map_or(false, |ext| ext == "yaml") {
+                Some(path)
+            } else {
+                if path.extension().map_or(false, |ext| ext == "yml") {
+                    Some(path)
+                } else {
+                    None
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+    Ok(paths)
 }

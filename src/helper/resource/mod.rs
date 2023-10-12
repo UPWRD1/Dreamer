@@ -14,6 +14,7 @@ use std::iter::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::fs::File;
+
 use super::refs::LISTCMD;
 use super::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
 
@@ -34,7 +35,7 @@ macro_rules! infoprint {
         println!("    {0}  {1}","[i]".blue().bold(), format_args!($($arg)*))
     }};
 }
-/*
+
 macro_rules! warnprint {
     () => {
         eprint!("\n")
@@ -43,7 +44,7 @@ macro_rules! warnprint {
         eprint!("    {0}  {1}", "[W]".yellow().bold(), format_args!($($arg)*))
     }};
 }
-*/
+
 
 macro_rules! successprint {
     () => {
@@ -101,7 +102,7 @@ macro_rules! shellprint {
         print!("    {0} {1} ", "[>]".yellow().bold(), format_args!($($arg)*))
     }};
 }
-/*
+
 pub fn throw_fatal(msg: &str) {
     errprint!(
         "{0}{1}{2}",
@@ -113,13 +114,13 @@ pub fn throw_fatal(msg: &str) {
             .bold()
     );
 }
-*/
+
 pub fn printusage(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
         infoprint!("Usage: {0}{1}", " ./unify ".black(), msg.black());
     } else if ostype == "linux" || ostype == "macos" {
-        infoprint!("Usage: {0} {1}", " unify ".black(), msg.black());
+        infoprint!("Usage: {0}{1}", " unify ".black(), msg.black());
     }
 }
 
@@ -143,8 +144,8 @@ pub fn usage_and_quit(cmd: &str, msg: &str) {
     usage(cmd);
     std::process::exit(0);
 }
-/*
-pub fn option_list(kind: &str, opts: Vec<&str>, msg: &str) -> std::string::String {
+
+pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> std::string::String {
     match kind {
         "err" => {
             errprint!("{}", msg);
@@ -164,7 +165,7 @@ pub fn option_list(kind: &str, opts: Vec<&str>, msg: &str) -> std::string::Strin
     }
     questionprint!("==> ")
 }
-*/
+
 
 pub fn quit() {
     std::process::exit(0);
@@ -247,3 +248,4 @@ pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), 
         Err(("Not enough Arguments!".to_string(), "Invalid Args".to_string() ))
     }
 }
+
