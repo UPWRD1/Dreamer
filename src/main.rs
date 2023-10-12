@@ -7,11 +7,11 @@ use std::env::{self};
 use std::iter::*;
 
 mod helper;
-use helper::{argparse, help, init, invalid_args_notify, load, run, list, get_yaml_paths, add};
-use helper::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD, LISTCMD, ADDCMD};
+use helper::refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD};
 use helper::resource::throw_fatal;
+use helper::{add, argparse, get_yaml_paths, help, init, invalid_args_notify, list, load, run};
 
-use crate::helper::resource::option_list;
+use crate::helper::resource::{option_list, quit};
 /*
 Error codes:
 0000 OK
@@ -28,28 +28,51 @@ pub fn cli() {
     pub const ENV_COMMANDS: Vec<String> = vec![];
     if args.clone().len() == 1 {
         match env::current_dir() {
-            Ok(dir) => {
-                match get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
-                    Ok(paths) => {
-                        let paths_f = paths.into_iter().map(|s| s.as_path().to_str().map(|s| s.to_string()).unwrap()).collect();
-                        option_list("info", paths_f, "Choose a file:");
-                    }
-                    Err(..) => {
-                        throw_fatal("Very bad 2")
+            Ok(dir) => match get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
+                Ok(paths) => {
+                    let paths_f: Vec<String> = paths
+                        .into_iter()
+                        .map(|s| {
+                            s.file_stem()
+                                .unwrap()
+                                .to_str()
+                                .map(|s| s.to_string())
+                                .unwrap()
+                        })
+                        .collect();
+                    let index = option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
+                    let index_s = index.parse::<usize>().unwrap();
+                    if index_s < paths_f.len() {
+                        if index_s == 0 {
+                            quit();
+                        } else {
+                            let mut n_args = args.clone();
+                            n_args.push("".to_string());
+                            n_args.insert(
+                                2,
+                                paths_f[index_s - 1]
+                                    .clone()
+                                    .strip_suffix(".uni")
+                                    .unwrap()
+                                    .to_string(),
+                            );
+                            let _ = load(n_args.clone(), ENV_COMMANDS, home_dir);
+                            let _ = run(n_args.clone());
+                        }
+                    } else {
+                        quit()
                     }
                 }
-            }
-            Err(e) => {
-                throw_fatal(format!("Very Bad: {e}").as_str())
-            }
+                Err(..) => throw_fatal("Very bad 2"),
+            },
+            Err(e) => throw_fatal(format!("Very Bad: {e}").as_str()),
         }
-        /* 
+        /*
         let mut n_args = args.clone();
         n_args.push("".to_string());
         n_args.insert(2, "unify".to_string());
         let _ = load(n_args.clone(), ENV_COMMANDS, home_dir);
         let _ = run(n_args.clone());*/
-
     } else {
         match args[1] {
             _ if argparse(&args, 1, INITCMD) => {

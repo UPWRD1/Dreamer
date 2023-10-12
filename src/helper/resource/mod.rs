@@ -23,7 +23,7 @@ macro_rules! errprint {
         eprint!("\n")
     };
     ($($arg:tt)*) => {{
-        eprintln!("    {0}  {1}","[!]".red().bold(), format_args!($($arg)*))
+        eprintln!("    {0} {1}","[!]".red().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -32,7 +32,7 @@ macro_rules! infoprint {
         print!("\n")
     };
     ($($arg:tt)*) => {{
-        println!("    {0}  {1}","[i]".blue().bold(), format_args!($($arg)*))
+        println!("    {0} {1}","[i]".blue().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -41,7 +41,7 @@ macro_rules! warnprint {
         eprint!("\n")
     };
     ($($arg:tt)*) => {{
-        eprint!("    {0}  {1}", "[W]".yellow().bold(), format_args!($($arg)*))
+        eprint!("    {0} {1}", "[W]".yellow().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -51,7 +51,7 @@ macro_rules! successprint {
         eprint!("\n")
     };
     ($($arg:tt)*) => {{
-        eprint!("    {0} {1}", "[✔]".green().bold(), format_args!($($arg)*))
+        eprint!("    {0}{1}", "[✔]".green().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -160,10 +160,17 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> std::string::Str
             throw_fatal("Invalid Message Type");
         }
     }
+    let mut count = 1;
     for (i, el) in opts.iter().enumerate() {
-        println!("\t\t {0}: {1}", i, el)
+        println!("\t\t {0}: {1}", i + 1, el);
+        count += 1;
     }
-    questionprint!("==> ")
+    let result = questionprint!("==> ");
+    if count < result.parse::<usize>().unwrap() {
+        quit()
+    }
+    result
+
 }
 
 
