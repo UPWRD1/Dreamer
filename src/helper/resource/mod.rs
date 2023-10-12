@@ -166,11 +166,26 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> std::string::Str
         count += 1;
     }
     let result = questionprint!("==> ");
-    if count < result.parse::<usize>().unwrap() {
-        quit()
+    if result.contains([
+        'a', 'b', 'c', 'd', 'e', 
+        'f', 'g', 'h', 'i', 'j', 
+        'k', 'l', 'm', 'n', 'o',
+        'p', 'q', 'r', 's', 't', 
+        'u', 'v', 'w', 'x', 'y', 
+        'z','A', 'B', 'C', 'D', 'E', 
+        'F', 'G', 'H', 'I', 'J', 
+        'K', 'L', 'M', 'N', 'O',
+        'P', 'Q', 'R', 'S', 'T', 
+        'U', 'V', 'W', 'X', 'Y', 
+        'Z',
+    ]) {
+        quit();
+    } else if count < result.parse::<usize>().unwrap() {
+        quit();
+    } else {
+        return result
     }
     result
-
 }
 
 
