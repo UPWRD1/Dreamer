@@ -165,25 +165,29 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> std::string::Str
         println!("\t\t {0}: {1}", i + 1, el);
         count += 1;
     }
-    let result = questionprint!("==> ");
-    if result.contains([
-        'a', 'b', 'c', 'd', 'e', 
-        'f', 'g', 'h', 'i', 'j', 
-        'k', 'l', 'm', 'n', 'o',
-        'p', 'q', 'r', 's', 't', 
-        'u', 'v', 'w', 'x', 'y', 
-        'z','A', 'B', 'C', 'D', 'E', 
-        'F', 'G', 'H', 'I', 'J', 
-        'K', 'L', 'M', 'N', 'O',
-        'P', 'Q', 'R', 'S', 'T', 
-        'U', 'V', 'W', 'X', 'Y', 
-        'Z',
-    ]) {
-        quit();
-    } else if count < result.parse::<usize>().unwrap() {
-        quit();
+    let result: String = questionprint!("==> ");
+    if result.len() == 1 {
+        if result.contains([
+            'a', 'b', 'c', 'd', 'e', 
+            'f', 'g', 'h', 'i', 'j', 
+            'k', 'l', 'm', 'n', 'o',
+            'p', 'q', 'r', 's', 't', 
+            'u', 'v', 'w', 'x', 'y', 
+            'z','A', 'B', 'C', 'D', 'E', 
+            'F', 'G', 'H', 'I', 'J', 
+            'K', 'L', 'M', 'N', 'O',
+            'P', 'Q', 'R', 'S', 'T', 
+            'U', 'V', 'W', 'X', 'Y', 
+            'Z',
+        ]) {
+            quit();
+        } else if count < result.parse::<usize>().unwrap() {
+            quit();
+        } else {
+            return result
+        }
     } else {
-        return result
+         quit();
     }
     result
 }
