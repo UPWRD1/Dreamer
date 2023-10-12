@@ -241,8 +241,8 @@ fn tool_install(
                     let args2: Vec<&str> = vec!["/C", "chmod", "a+x", &namef];
                     let status2 = Command::new("cmd").args(args2).status()?;
                     if status2.success() {
+                        infoprint!(" '{}' installed", tool.name);
                         return Ok(());
-                        //infoprint!("Command '{}' executed successfully", command);
                     } else {
                         errprint!("Error grabbing: '{}'", tool.name);
                         continue_prompt();
@@ -267,7 +267,7 @@ fn tool_install(
                 let link_str_f = format!("{link_str}");
                 let namef = format!("{0}{1}", dir_loc, tool.name);
                 let args: Vec<&str> =
-                    vec!["-c", "curl", &link_str_f, "--output", &namef, "--silent"];
+                    vec!["-c", "/usr/bin/curl", &link_str_f, "--output", &namef];
                 println!("{:?}", args);
                 let status = Command::new("bash").args(args).status()?;
 
