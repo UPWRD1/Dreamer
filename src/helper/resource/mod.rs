@@ -123,6 +123,20 @@ pub fn printusage(msg: &str) {
     }
 }
 
+pub fn hash_string(key: &String) -> String {
+    let length = key.len() - 1;
+    let mut hash: u128 = 2166136261;
+    let key_vc: Vec<char> = key.chars().collect::<Vec<char>>();
+    println!("{}", std::u128::MAX);
+    for i in 0..=length {
+      hash ^= key_vc[i as usize] as u128 - '0' as u128;
+      println!("{hash}");
+      //16777619
+      //hash.overflowing_mul(rhs)
+    }
+    return hash.to_string();
+  }
+
 pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);

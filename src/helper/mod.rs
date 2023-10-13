@@ -9,7 +9,7 @@ pub mod resource;
 pub mod shell;
 use crate::helper::resource::{
     calculate_hash, check_arg_len, clear_term, input_fmt, printhelp, printusage, printusagenb,
-    printusetemplate, quit, usage_and_quit,
+    printusetemplate, quit, usage_and_quit, hash_string
 };
 
 pub(crate) mod refs;
@@ -320,6 +320,7 @@ fn load_exec(
         Ok(config) => {
             infoprint!("Getting dependancies from file: '{}'", filepath);
             let hashname = calculate_hash(&config.project.name);
+            println!("{}", hash_string(&config.project.name));
             for tool in config.deps.tools {
                 let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir, global_opts);
             }
