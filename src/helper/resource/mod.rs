@@ -175,7 +175,7 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
     }
     //let mut count = 1;
     for (i, el) in opts.iter().enumerate() {
-        println!("\t\t {0}: {1}", i + 1, el);
+        println!("\t  {0}: {1}", i + 1, el);
         //count += 1;
     }
     let result: String = questionprint!("==> ");

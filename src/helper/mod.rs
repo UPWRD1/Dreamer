@@ -430,7 +430,7 @@ fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn E
                 infoprint!("'{}' requires the following dependancies:", filepath);
                 let mut num = 1;
                 for tool in config.deps.tools {
-                    println!("\t {0}: {1}", num, tool.name);
+                    println!("  {0}: {1}", num, tool.name);
                     num += 1;
                 }
                 Ok(())
@@ -440,7 +440,7 @@ fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn E
                 infoprint!("Dependancies for {}:", filepath);
                 let mut num = 1;
                 for tool in config.deps.tools {
-                    println!("\t {0}: {1}", num, tool.name);
+                    println!("  {0}: {1}", num, tool.name);
                     num += 1;
                 }
                 Ok(())
