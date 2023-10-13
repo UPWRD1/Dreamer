@@ -9,11 +9,11 @@ use std::io;
 use std::io::BufRead;
 use std::io::Write;
 //use std::io::Read;
-use std::fmt::Arguments;
-use std::iter::*;
 use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::fmt::Arguments;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
+use std::iter::*;
 
 use super::refs::LISTCMD;
 use super::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
@@ -44,7 +44,6 @@ macro_rules! warnprint {
         eprint!("    {0} {1}", "[W]".yellow().bold(), format_args!($($arg)*))
     }};
 }
-
 
 macro_rules! successprint {
     () => {
@@ -145,7 +144,7 @@ pub fn usage_and_quit(cmd: &str, msg: &str) {
     std::process::exit(0);
 }
 
-pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> std::string::String {
+pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
     match kind {
         "err" => {
             errprint!("{}", msg);
@@ -160,34 +159,26 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> std::string::Str
             throw_fatal("Invalid Message Type");
         }
     }
-    let mut count = 1;
+    //let mut count = 1;
     for (i, el) in opts.iter().enumerate() {
         println!("\t\t {0}: {1}", i + 1, el);
-        count += 1;
+        //count += 1;
     }
-    let result = questionprint!("==> ");
-    if result.contains([
-        'a', 'b', 'c', 'd', 'e', 
-        'f', 'g', 'h', 'i', 'j', 
-        'k', 'l', 'm', 'n', 'o',
-        'p', 'q', 'r', 's', 't', 
-        'u', 'v', 'w', 'x', 'y', 
-        'z','A', 'B', 'C', 'D', 'E', 
-        'F', 'G', 'H', 'I', 'J', 
-        'K', 'L', 'M', 'N', 'O',
-        'P', 'Q', 'R', 'S', 'T', 
-        'U', 'V', 'W', 'X', 'Y', 
-        'Z',
-    ]) {
-        quit();
-    } else if count < result.parse::<usize>().unwrap() {
-        quit();
+    let result: String = questionprint!("==> ");
+    let result_c: Vec<char> = result.chars().collect();
+    //println!("{}", result_c.len());
+    if result_c.len() == 1 {
+        match result_c[0] {
+            '1'..='9' => return result_c,
+            _ => {
+                quit();
+            }
+        }
     } else {
-        return result
+        quit();
     }
-    result
+    result_c
 }
-
 
 pub fn quit() {
     std::process::exit(0);
@@ -262,12 +253,13 @@ pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), 
                 match file {
                     Ok(v_file) => Ok((v_file, filepath)),
                     Err(error) => Err((error.to_string(), filepath)),
-                    
                 }
             }
         }
     } else {
-        Err(("Not enough Arguments!".to_string(), "Invalid Args".to_string() ))
+        Err((
+            "Not enough Arguments!".to_string(),
+            "Invalid Args".to_string(),
+        ))
     }
 }
-
