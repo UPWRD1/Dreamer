@@ -1,5 +1,5 @@
 //use super::resource::throw_fatal;
-use crate::helper::{colored::Colorize, resource::clear_term};
+use crate::helper::{clear_term, colored::Colorize, SELF_VERSION};
 //use crate::helper::input_fmt;
 use std::{
     env::{self},
@@ -11,37 +11,31 @@ use std::{
 };
 
 use super::resource::quit;
+/*
+fn unish_exec(command: &str, args: SplitWhitespace<'_>, previous_cmd: &mut Option<Child>, commands: &mut std::iter::Peekable<std::str::Split<'_, &str>>) {
 
-/* 
-fn unish_exec(command: &str, args: SplitWhitespace<'_>, mut previous_cmd: Option<Child>, mut commands: std::iter::Peekable<std::str::Split<'_, &str>>) {
+    let stdin = previous_cmd
+    .map_or(Stdio::inherit(), |output: Child| { Stdio::from(output.stdout.unwrap())});
 
-            //unish_exec(command, args, previous_cmd, commands);
-            let stdin = previous_cmd.map_or(Stdio::inherit(), |output: Child| {
-                Stdio::from(output.stdout.unwrap())
-            });
+    let stdout = if commands.peek().is_some() {
+        Stdio::piped()
+    } else {
+        Stdio::inherit()
+    };
 
-            let stdout = if commands.peek().is_some() {
-                Stdio::piped()
-            } else {
-                Stdio::inherit()
-            };
+    let output = Command::new(command)
+    .args(args)
+    .stdin(stdin)
+    .stdout(stdout)
+    .spawn();
 
-            let output = Command::new(command)
-                .args(args)
-                .stdin(stdin)
-                .stdout(stdout)
-                .spawn();
+    match output {
+        Ok(output) => { *previous_cmd = Some(output);},
+        Err(e) => {
+            let previous_cmd: &mut Option<Child> = &mut None;
+            errprint!("{}", e); }
+    }
 
-            match output {
-                Ok(output) => {
-                    return previous_cmd = Some(output);
-                }
-                Err(e) => {
-                    errprint!("{}", e);
-                    return previous_cmd = None;
-                    
-                }
-            }
 }
 
 fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: Option<Child>, commands: std::iter::Peekable<std::str::Split<'_, &str>>) {
@@ -67,11 +61,11 @@ fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: O
 
 */
 
-fn unish_check_is_local(cmd: &str) -> bool {
-    super::refs::ENV_COMMANDS.contains(&cmd.to_string())
+fn unish_check_is_local(cmd: &str, env_cmds: &[String]) -> bool {
+    env_cmds.contains(&cmd.to_string())
 }
 
-fn unish_loop() {
+fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, hashname: u64) {
     loop {
         let curr_dir = env::current_dir();
         shellprint!("(~{}) [unify] @> ", curr_dir.unwrap().to_string_lossy());
@@ -97,7 +91,7 @@ fn unish_loop() {
                                 errprint!("{}", e);
                             }
                         }
-                        "exit" => {
+                        "exit()" => {
                             quit();
 
                         }
@@ -105,8 +99,8 @@ fn unish_loop() {
                         "clear" | "cls" => clear_term(),
 
                         command => {
-                            if unish_check_is_local(command) {
-                                infoprint!("LOCAL");
+                            if unish_check_is_local(command, &env_cmds) {
+                                println!("LOCAL");
                                 //unish_exec(command, args, previous_cmd, commands);
                                 let stdin = previous_cmd
                                     .map_or(Stdio::inherit(), |output: Child| {
@@ -118,8 +112,16 @@ fn unish_loop() {
                                 } else {
                                     Stdio::inherit()
                                 };
-
-                                let output = Command::new(command)
+                                /*
+                                                                let home_dir = env::home_dir().unwrap();
+                                let home_dir_u = home_dir.display();
+                                let command_pathv: String = format!("{home_dir_u}\\unify\\{command}");
+                                infoprint!("{}", command_pathv);
+                                 */
+                                
+                                let cmd_local = format!("{0}/.unify/bins/{1}/{2}", home_dir.clone().unwrap(), hashname, command);
+                                println!("{}", cmd_local);
+                                let output = Command::new(cmd_local)
                                     .args(args)
                                     .stdin(stdin)
                                     .stdout(stdout)
@@ -167,8 +169,6 @@ fn unish_loop() {
                     }
                 }
                 None => {
-                    errprint!("No Command!");
-                    quit()
                 }
             }
             
@@ -181,6 +181,10 @@ fn unish_loop() {
     }
 }
 
-pub fn init_shell() {
-    unish_loop();
+pub fn init_shell(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, hashname: u64) {
+    infoprint!("Entering Virtual Environment...");
+    //pause();
+    //clear_term();
+    infoprint!("Unify {0} (type 'exit()' to exit)", SELF_VERSION);
+    unish_loop(env_cmds, home_dir, hashname);
 }
