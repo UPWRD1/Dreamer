@@ -250,7 +250,7 @@ fn tool_install(
                     let args2: Vec<&str> = vec!["/C", "chmod", "a+x", &namef];
                     let status2 = Command::new("cmd").args(args2).status()?;
                     if status2.success() {
-                 verbose_info_print(format!("'{}' installed", tool.name), global_opts);
+                        verbose_info_print(format!("'{}' installed", tool.name), global_opts);
                         return Ok(());
                     } else {
                         errprint!("Error grabbing: '{}'", tool.name);
@@ -275,7 +275,7 @@ fn tool_install(
             Ok(..) => {
                 let link_str_f = format!("{link_str}");
                 let namef = format!("{0}{1}", dir_loc, tool.name);
-         let args: Vec<&str> = vec!["-c", "/usr/bin/curl", &link_str_f, "--output", &namef];
+                let args: Vec<&str> = vec!["-c", "/usr/bin/curl", &link_str_f, "--output", &namef];
                 let status = Command::new("bash").args(args).status()?;
 
                 if status.success() {
@@ -361,7 +361,6 @@ fn load_deps(
     }
     Err("Bad File".into())
 }
-
 pub fn load(
     argsv: Vec<String>,
     env_cmds: Vec<String>,
@@ -390,7 +389,7 @@ pub fn load_run(
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
     global_opts: &[bool],
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), ()> {
     match load_deps(
         argsv.to_owned(),
         &env_cmds.to_vec(),
@@ -399,14 +398,18 @@ pub fn load_run(
     ) {
         Err(_) => {
             quit();
-            Err("Error Loading".into())
+            return Err(())
         }
-        Ok(..) => match run(argsv, global_opts) {
+        Ok(result) => match run(argsv, global_opts) {
             Err(_) => {
                 quit();
-                Err("Error Loading".into())
+                return Err(())
+
             }
-            Ok(..) => Ok(()),
+            Ok(..) => {
+                init_shell(result.0, home_dir, result.1);
+                return Ok(())
+            },
         },
     }
 }
@@ -562,9 +565,9 @@ pub fn verbose_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bo
 
 pub fn verbose_check(global_opts: &[bool]) -> bool {
     if global_opts.len() > 0 {
-        return global_opts[0] == true
+        return global_opts[0] == true;
     }
-    return false
+    return false;
 }
 
 pub fn verbose_info_print(msg: String, global_opts: &[bool]) {
