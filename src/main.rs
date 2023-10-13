@@ -9,9 +9,11 @@ use std::iter::*;
 mod helper;
 use helper::refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD};
 use helper::resource::throw_fatal;
-use helper::{add, argparse, get_yaml_paths, help, init, invalid_args_notify, list, load, run};
+use helper::{add, argparse, get_yaml_paths, help, init, invalid_args_notify, list, load, run,verbose_set_true, load_run};
 
 use crate::helper::resource::{option_list, quit};
+
+
 /*
 Error codes:
 0000 OK
@@ -26,6 +28,13 @@ pub fn cli() {
     let args: Vec<String> = env::args().collect(); // Argument collection
     let home_dir: Result<String, env::VarError> = env::var("HOME");
     pub const ENV_COMMANDS: Vec<String> = vec![];
+    let mut global_options : Vec<bool> = vec![];
+    /*
+    global options:
+    0: verbose
+    1: 
+     */
+    verbose_set_true(&args, &mut global_options);
     if args.clone().len() == 1 {
         match env::current_dir() {
             Ok(dir) => match get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
@@ -41,23 +50,37 @@ pub fn cli() {
                         })
                         .collect();
                     let index = option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
-                    let index_s = index.parse::<usize>().unwrap();
-                    if index_s < paths_f.len() {
-                        if index_s == 0 {
+                    let index_c = index[0];
+                    if index_c.is_ascii_digit() {
+                        if index_c as usize == 0 {
                             quit();
                         } else {
+                            let index_u = index_c.to_digit(10).unwrap() as usize;
                             let mut n_args = args.clone();
                             n_args.push("".to_string());
                             n_args.insert(
                                 2,
-                                paths_f[index_s - 1]
+                                paths_f[index_u - 1]
                                     .clone()
                                     .strip_suffix(".uni")
                                     .unwrap()
                                     .to_string(),
                             );
-                            let _ = load(n_args.clone(), ENV_COMMANDS, home_dir);
-                            let _ = run(n_args.clone());
+                            match load_run(n_args.clone(), ENV_COMMANDS, home_dir, &global_options) {
+                                Ok(()) => {
+                                    match run(n_args.clone(), &global_options) {
+                                        Ok(()) => {
+                                            println!("{:?}", global_options);
+                                        }
+                                        Err(..) => {
+                                            quit()
+                                        }
+                                    }
+                                }
+                                Err(..) => {
+                                    quit()
+                                }
+                            }
                         }
                     } else {
                         quit()
@@ -79,13 +102,13 @@ pub fn cli() {
                 let _ = init(args);
             }
             _ if argparse(&args, 1, RUNCMD) => {
-                let _ = run(args);
+                let _ = run(args, &global_options);
             }
             _ if argparse(&args, 1, HELPCMD) => {
                 help(args);
             }
             _ if argparse(&args, 1, LOADCMD) => {
-                load(args, ENV_COMMANDS, home_dir);
+                let _ = load(args, ENV_COMMANDS, home_dir, &global_options);
             }
             _ if argparse(&args, 1, LISTCMD) => {
                 let _ = list(args, 0);

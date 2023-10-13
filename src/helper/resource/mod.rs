@@ -145,7 +145,7 @@ pub fn usage_and_quit(cmd: &str, msg: &str) {
     std::process::exit(0);
 }
 
-pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> std::string::String {
+pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
     match kind {
         "err" => {
             errprint!("{}", msg);
@@ -160,36 +160,27 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> std::string::Str
             throw_fatal("Invalid Message Type");
         }
     }
-    let mut count = 1;
+    //let mut count = 1;
     for (i, el) in opts.iter().enumerate() {
         println!("\t\t {0}: {1}", i + 1, el);
-        count += 1;
+        //count += 1;
     }
     let result: String = questionprint!("==> ");
-    if result.len() == 1 {
-        if result.contains([
-            'a', 'b', 'c', 'd', 'e', 
-            'f', 'g', 'h', 'i', 'j', 
-            'k', 'l', 'm', 'n', 'o',
-            'p', 'q', 'r', 's', 't', 
-            'u', 'v', 'w', 'x', 'y', 
-            'z','A', 'B', 'C', 'D', 'E', 
-            'F', 'G', 'H', 'I', 'J', 
-            'K', 'L', 'M', 'N', 'O',
-            'P', 'Q', 'R', 'S', 'T', 
-            'U', 'V', 'W', 'X', 'Y', 
-            'Z',
-        ]) {
-            quit();
-        } else if count < result.parse::<usize>().unwrap() {
-            quit();
-        } else {
-            return result
+    let result_c: Vec<char> = result.chars().collect();
+    //println!("{}", result_c.len());
+    if result_c.len() == 1 {
+        match result_c[0] {
+            '1'..='9' => {
+                return result_c
+            }
+            _ => {
+                quit();
+            }
         }
     } else {
          quit();
     }
-    result
+    result_c
 }
 
 
@@ -274,4 +265,3 @@ pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), 
         Err(("Not enough Arguments!".to_string(), "Invalid Args".to_string() ))
     }
 }
-

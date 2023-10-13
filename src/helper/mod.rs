@@ -19,13 +19,13 @@ use serde::{Deserialize, Serialize};
 //use std::env;
 use std::error::Error;
 //use std::fs::metadata;
-use std::path::PathBuf;
 use std::env::{self};
 use std::fs::{self, File};
 use std::io::BufReader;
 use std::io::Write;
 use std::iter::*;
 use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 
 use self::refs::AVAILABLE_CMDS;
@@ -65,7 +65,7 @@ pub struct UniConfig {
 }
 
 pub fn continue_prompt() {
-    match questionprint!(" Do you want to continue? (Y/N)").as_str() {
+    match questionprint!("Do you want to continue? (Y/N)").as_str() {
         "y" | "Y" => {}
         &_ => {
             quit();
@@ -104,13 +104,14 @@ deps:
     Ok("File Created!".to_string())
 }
 
-fn run_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
+fn run_exec(v_file: File, filepath: String, global_opts: Vec<bool>) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into PluConfig struct
     let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
             errprint!("Invalid Config file '{}'", filepath);
+            quit();
             Err("Invalid Config".into())
         }
 
@@ -127,7 +128,9 @@ fn run_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
                 if cfg!(target_os = "windows") {
                     let status = Command::new(program).args(args).status()?;
                     if status.success() {
-                        //infoprint!("Command '{}' executed successfully", command);
+                        if verbose_check(&global_opts) {
+                            infoprint!("Command '{}' executed successfully", command);
+                        }
                         okcount += 1;
                     } else {
                         errprint!("Error executing command: '{}'", command);
@@ -135,7 +138,9 @@ fn run_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
                 } else {
                     let status = Command::new(program).args(args).status()?;
                     if status.success() {
-                        infoprint!("Command '{}' executed successfully", command);
+                        if verbose_check(&global_opts) {
+                            infoprint!("Command '{}' executed successfully", command);
+                        }
                         okcount += 1;
                     } else {
                         errprint!("Error executing command: '{}'", command);
@@ -153,13 +158,13 @@ fn run_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
     }
 }
 
-pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
+pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(RUNCMD.name, "Missing Filename!")
     }
 
     let _ = match read_file(&argsv, 2) {
-        Ok(v_file) => run_exec(v_file.0, v_file.1),
+        Ok(v_file) => run_exec(v_file.0, v_file.1, global_opts.to_vec()),
         Err(file) => {
             errprint!("Cannot find file '{}'", file.1);
             infoprint!(
@@ -219,9 +224,13 @@ fn tool_install(
     hashname: u64,
     env_cmds: &mut Vec<String>,
     home_dir: &mut Result<String, env::VarError>,
+    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     env_cmds.push(tool.name.clone());
-    infoprint!("Installing {0} from {1}", tool.name, tool.link);
+    verbose_info_print(
+        format!("Installing {0} from {1}", tool.name, tool.link),
+        global_opts,
+    );
     let link = tool.link;
     let link_str = format!("{}", link);
     if cfg!(windows) {
@@ -241,7 +250,7 @@ fn tool_install(
                     let args2: Vec<&str> = vec!["/C", "chmod", "a+x", &namef];
                     let status2 = Command::new("cmd").args(args2).status()?;
                     if status2.success() {
-                        infoprint!(" '{}' installed", tool.name);
+                        verbose_info_print(format!("'{}' installed", tool.name), global_opts);
                         return Ok(());
                     } else {
                         errprint!("Error grabbing: '{}'", tool.name);
@@ -266,22 +275,19 @@ fn tool_install(
             Ok(..) => {
                 let link_str_f = format!("{link_str}");
                 let namef = format!("{0}{1}", dir_loc, tool.name);
-                let args: Vec<&str> =
-                    vec!["-c", "/usr/bin/curl", &link_str_f, "--output", &namef];
-                println!("{:?}", args);
+                let args: Vec<&str> = vec!["-c", "/usr/bin/curl", &link_str_f, "--output", &namef];
                 let status = Command::new("bash").args(args).status()?;
 
                 if status.success() {
                     let args2: Vec<&str> = vec!["-c", "chmod", "a+x", &namef];
                     let status2 = Command::new("bash").args(args2).status()?;
                     if status2.success() {
+                        verbose_info_print(format!("'{}' installed", tool.name), global_opts);
                         return Ok(());
-                        //infoprint!("Command '{}' executed successfully", command);
                     } else {
                         errprint!("Error grabbing: '{}'", tool.name);
                         return Err("Error grabbing".into());
                     }
-                    //infoprint!("Command '{}' executed successfully", command);
                 } else {
                     errprint!("Error grabbing: '{}'", tool.name);
                     Err("Error grabbing".into())
@@ -300,6 +306,7 @@ fn load_exec(
     filepath: String,
     mut env_cmds: Vec<String>,
     mut home_dir: Result<String, env::VarError>,
+    global_opts: &[bool],
 ) -> Result<(Vec<String>, u64), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into DepConfig struct
@@ -307,13 +314,14 @@ fn load_exec(
     match config {
         Err(_) => {
             errprint!("File '{}' is not a valid config file", filepath);
+            quit();
             Err("Invalid Config".into())
         }
         Ok(config) => {
             infoprint!("Getting dependancies from file: '{}'", filepath);
             let hashname = calculate_hash(&config.project.name);
             for tool in config.deps.tools {
-                let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir);
+                let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir, global_opts);
             }
             let result = (env_cmds, hashname);
             Ok(result)
@@ -325,6 +333,7 @@ fn load_deps(
     argsv: Vec<String>,
     env_cmds: &[String],
     home_dir: Result<String, env::VarError>,
+    global_opts: &[bool],
 ) -> Result<(Vec<String>, u64), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LOADCMD.name, "Missing Filename!");
@@ -335,7 +344,8 @@ fn load_deps(
         continue_prompt();
         let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2) {
             Ok(v_file) => {
-                let result = load_exec(v_file.0, v_file.1, env_cmds.to_vec(), home_dir);
+                let result =
+                    load_exec(v_file.0, v_file.1, env_cmds.to_vec(), home_dir, global_opts);
                 return result;
                 //Ok(result)
             }
@@ -352,17 +362,54 @@ fn load_deps(
     Err("Bad File".into())
 }
 
-pub fn load(argsv: Vec<String>, env_cmds: Vec<String>, home_dir: Result<String, env::VarError>) {
-    match load_deps(argsv.to_owned(), &env_cmds.to_vec(), home_dir.clone()) {
+pub fn load(
+    argsv: Vec<String>,
+    env_cmds: Vec<String>,
+    home_dir: Result<String, env::VarError>,
+    global_opts: &[bool],
+) -> Result<(), Box<dyn Error>> {
+    match load_deps(
+        argsv.to_owned(),
+        &env_cmds.to_vec(),
+        home_dir.clone(),
+        global_opts,
+    ) {
         Err(_) => {
             quit();
+            Err("Error Loading".into())
         }
         Ok(result) => {
             init_shell(result.0.clone(), home_dir.clone(), result.1);
+            Ok(())
         }
     }
 }
 
+pub fn load_run(
+    argsv: Vec<String>,
+    env_cmds: Vec<String>,
+    home_dir: Result<String, env::VarError>,
+    global_opts: &[bool],
+) -> Result<(), Box<dyn Error>> {
+    match load_deps(
+        argsv.to_owned(),
+        &env_cmds.to_vec(),
+        home_dir.clone(),
+        global_opts,
+    ) {
+        Err(_) => {
+            quit();
+            Err("Error Loading".into())
+        }
+        Ok(..) => match run(argsv, global_opts) {
+            Err(_) => {
+                quit();
+                Err("Error Loading".into())
+            }
+            Ok(..) => Ok(()),
+        },
+    }
+}
 fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML
@@ -370,6 +417,7 @@ fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn E
     match config {
         Err(_) => {
             errprint!("Invalid Config file '{}'", filepath);
+            quit();
             Err("Invalid Config".into())
         }
 
@@ -384,7 +432,7 @@ fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn E
                 Ok(())
             }
 
-            0 | _  => {
+            0 | _ => {
                 infoprint!("Dependancies for {}:", filepath);
                 let mut num = 1;
                 for tool in config.deps.tools {
@@ -501,4 +549,26 @@ pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
         })
         .collect::<Vec<_>>();
     Ok(paths)
+}
+
+pub fn verbose_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
+    if argsv.contains(&"-v".to_string()) {
+        global_opts.insert(0, true);
+        return global_opts.to_vec();
+    } else {
+        return global_opts.to_vec();
+    }
+}
+
+pub fn verbose_check(global_opts: &[bool]) -> bool {
+    if global_opts.len() > 0 {
+        return global_opts[0] == true
+    }
+    return false
+}
+
+pub fn verbose_info_print(msg: String, global_opts: &[bool]) {
+    if verbose_check(global_opts) {
+        infoprint!("{msg}")
+    }
 }
