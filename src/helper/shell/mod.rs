@@ -38,8 +38,7 @@ fn unish_exec(command: &str, args: SplitWhitespace<'_>, previous_cmd: &mut Optio
 
 }
 
-fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: &mut Option<Child>, commands: &mut std::iter::Peekable<std::str::Split<'_, &str>>) {
-
+fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: Option<Child>, commands: std::iter::Peekable<std::str::Split<'_, &str>>) {
     match command {
         "cd" => {
             let new_dir = &args.peekable().peek().map_or("/", |x| *x);
@@ -47,16 +46,19 @@ fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: &
             if let Err(e) = env::set_current_dir(root) {
                 errprint!("{}", e);
             }
-        },
-        "exit" => { quit(); },
+        }
+        "exit" => {
+            quit();
+        }
 
         "clear" | "cls" => print!("\x1B[2J\x1B[1;1H"),
 
-        &_ => {
+        command => {
             unish_exec(command, args, previous_cmd, commands);
+        }
     }
 }
-}
+
 */
 
 fn unish_check_is_local(cmd: &str, env_cmds: &[String]) -> bool {
@@ -73,7 +75,7 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, ha
         stdin().read_line(&mut input).unwrap();
 
         let mut commands = input.trim().split(" | ").peekable();
-        let mut previous_cmd = None;
+        let mut previous_cmd: Option<Child> = Default::default();
 
         while let Some(command) = commands.next() {
             let mut parts = command.split_whitespace(); //.map(str::to_string).collect();
@@ -91,6 +93,7 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, ha
                         }
                         "exit()" => {
                             quit();
+
                         }
 
                         "clear" | "cls" => clear_term(),
@@ -168,6 +171,7 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, ha
                 None => {
                 }
             }
+            
         }
 
         if let Some(mut final_command) = previous_cmd {
