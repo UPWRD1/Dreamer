@@ -9,7 +9,7 @@ pub mod resource;
 pub mod shell;
 use crate::helper::resource::{
     calculate_hash, check_arg_len, clear_term, input_fmt, printhelp, printusage, printusagenb,
-    printusetemplate, quit, usage_and_quit,
+    printusetemplate, quit, usage_and_quit, hash_string
 };
 
 pub(crate) mod refs;
@@ -320,6 +320,7 @@ fn load_exec(
         Ok(config) => {
             infoprint!("Getting dependancies from file: '{}'", filepath);
             let hashname = calculate_hash(&config.project.name);
+            println!("{}", hash_string(&config.project.name));
             for tool in config.deps.tools {
                 let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir, global_opts);
             }
@@ -361,7 +362,6 @@ fn load_deps(
     }
     Err("Bad File".into())
 }
-
 pub fn load(
     argsv: Vec<String>,
     env_cmds: Vec<String>,
@@ -390,7 +390,7 @@ pub fn load_run(
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
     global_opts: &[bool],
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), ()> {
     match load_deps(
         argsv.to_owned(),
         &env_cmds.to_vec(),
@@ -399,14 +399,18 @@ pub fn load_run(
     ) {
         Err(_) => {
             quit();
-            Err("Error Loading".into())
+            return Err(())
         }
-        Ok(..) => match run(argsv, global_opts) {
+        Ok(result) => match run(argsv, global_opts) {
             Err(_) => {
                 quit();
-                Err("Error Loading".into())
+                return Err(())
+
             }
-            Ok(..) => Ok(()),
+            Ok(..) => {
+                init_shell(result.0, home_dir, result.1);
+                return Ok(())
+            },
         },
     }
 }
@@ -562,9 +566,9 @@ pub fn verbose_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bo
 
 pub fn verbose_check(global_opts: &[bool]) -> bool {
     if global_opts.len() > 0 {
-        return global_opts[0] == true
+        return global_opts[0] == true;
     }
-    return false
+    return false;
 }
 
 pub fn verbose_info_print(msg: String, global_opts: &[bool]) {

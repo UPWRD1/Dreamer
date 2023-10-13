@@ -9,11 +9,11 @@ use std::io;
 use std::io::BufRead;
 use std::io::Write;
 //use std::io::Read;
-use std::fmt::Arguments;
-use std::iter::*;
 use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::fmt::Arguments;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
+use std::iter::*;
 
 use super::refs::LISTCMD;
 use super::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
@@ -44,7 +44,6 @@ macro_rules! warnprint {
         eprint!("    {0} {1}", "[W]".yellow().bold(), format_args!($($arg)*))
     }};
 }
-
 
 macro_rules! successprint {
     () => {
@@ -124,6 +123,20 @@ pub fn printusage(msg: &str) {
     }
 }
 
+pub fn hash_string(key: &String) -> String {
+    let length = key.len() - 1;
+    let mut hash: u128 = 2166136261;
+    let key_vc: Vec<char> = key.chars().collect::<Vec<char>>();
+    println!("{}", std::u128::MAX);
+    for i in 0..=length {
+      hash ^= key_vc[i as usize] as u128 - '0' as u128;
+      println!("{hash}");
+      //16777619
+      //hash.overflowing_mul(rhs)
+    }
+    return hash.to_string();
+  }
+
 pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
@@ -170,19 +183,16 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
     //println!("{}", result_c.len());
     if result_c.len() == 1 {
         match result_c[0] {
-            '1'..='9' => {
-                return result_c
-            }
+            '1'..='9' => return result_c,
             _ => {
                 quit();
             }
         }
     } else {
-         quit();
+        quit();
     }
     result_c
 }
-
 
 pub fn quit() {
     std::process::exit(0);
@@ -257,11 +267,13 @@ pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), 
                 match file {
                     Ok(v_file) => Ok((v_file, filepath)),
                     Err(error) => Err((error.to_string(), filepath)),
-                    
                 }
             }
         }
     } else {
-        Err(("Not enough Arguments!".to_string(), "Invalid Args".to_string() ))
+        Err((
+            "Not enough Arguments!".to_string(),
+            "Invalid Args".to_string(),
+        ))
     }
 }

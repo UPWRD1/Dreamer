@@ -70,7 +70,7 @@ pub fn cli() {
                                 Ok(()) => {
                                     match run(n_args.clone(), &global_options) {
                                         Ok(()) => {
-                                            println!("{:?}", global_options);
+                                    
                                         }
                                         Err(..) => {
                                             quit()
