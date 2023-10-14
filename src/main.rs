@@ -12,6 +12,7 @@ use helper::resource::throw_fatal;
 use helper::{add, argparse, get_yaml_paths, help, init, invalid_args_notify, list, load, run,verbose_set_true, load_run};
 
 use crate::helper::resource::{option_list, quit};
+use crate::helper::verbose_info_print;
 
 
 /*
@@ -36,59 +37,28 @@ pub fn cli() {
      */
     verbose_set_true(&args, &mut global_options);
     if args.clone().len() == 1 {
-        match env::current_dir() {
-            Ok(dir) => match get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
-                Ok(paths) => {
-                    let paths_f: Vec<String> = paths
-                        .into_iter()
-                        .map(|s| {
-                            s.file_stem()
-                                .unwrap()
-                                .to_str()
-                                .map(|s| s.to_string())
-                                .unwrap()
-                        })
-                        .collect();
-                    let index = option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
-                    let index_c = index[0];
-                    if index_c.is_ascii_digit() {
-                        if index_c as usize == 0 {
-                            quit();
-                        } else {
-                            let index_u = index_c.to_digit(10).unwrap() as usize;
-                            let mut n_args = args.clone();
-                            n_args.push("".to_string());
-                            n_args.insert(
-                                2,
-                                paths_f[index_u - 1]
-                                    .clone()
-                                    .strip_suffix(".uni")
-                                    .unwrap()
-                                    .to_string(),
-                            );
-                            match load_run(n_args.clone(), ENV_COMMANDS, home_dir, &global_options) {
-                                Ok(()) => {
-                                    match run(n_args.clone(), &global_options) {
-                                        Ok(()) => {
-                                    
-                                        }
-                                        Err(..) => {
-                                            quit()
-                                        }
-                                    }
-                                }
-                                Err(..) => {
-                                    quit()
-                                }
-                            }
-                        }
-                    } else {
+        let n_args = synth_args(&args);
+        let n_args_u = n_args.clone().expect("Asdf");
+                let n_args_str: Vec<&str> = n_args_u.iter().map(|x| String::as_str(&x)).collect();
+                let n_args_string = n_args_str.iter().map(|&s| s.to_string()).collect::<Vec<String>>();
+        match load_run(n_args_string, ENV_COMMANDS, home_dir, &global_options) {
+            Ok(()) => {
+                let n_args_u = n_args.clone().expect("Asdf");
+                let n_args_str: Vec<&str> = n_args_u.iter().map(|x| String::as_str(&x)).collect();
+                let n_args_string = n_args_str.iter().map(|&s| s.to_string()).collect::<Vec<String>>();
+
+                match run(&n_args_string, &global_options) {
+                    Ok(()) => {
+                        verbose_info_print("OK".to_string(), &global_options)
+                    }
+                    Err(..) => {
                         quit()
                     }
                 }
-                Err(..) => throw_fatal("Very bad 2"),
-            },
-            Err(e) => throw_fatal(format!("Very Bad: {e}").as_str()),
+            }
+            Err(..) => {
+                quit()
+            }
         }
         /*
         let mut n_args = args.clone();
@@ -102,7 +72,7 @@ pub fn cli() {
                 let _ = init(args);
             }
             _ if argparse(&args, 1, RUNCMD) => {
-                let _ = run(args, &global_options);
+                let _ = run(&args, &global_options);
             }
             _ if argparse(&args, 1, HELPCMD) => {
                 help(args);
@@ -134,6 +104,57 @@ pub fn cli() {
         invalid_args_notify(args);
     }
     */
+}
+
+fn synth_args(args: &Vec<String>) -> Result<Vec<String>, ()> {
+    match env::current_dir() {
+        Ok(dir) => match get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
+            Ok(paths) => {
+                let paths_f: Vec<String> = paths
+                    .into_iter()
+                    .map(|s| {
+                        s.file_stem()
+                            .unwrap()
+                            .to_str()
+                            .map(|s| s.to_string())
+                            .unwrap()
+                    })
+                    .collect();
+                let index = option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
+                let index_c = index[0];
+                if index_c.is_ascii_digit() {
+                    if index_c as usize == 0 {
+                        quit();
+                        Err(())
+                    } else {
+                        let index_u = index_c.to_digit(10).unwrap() as usize;
+                        let mut n_args = args.clone();
+                        n_args.push("".to_string());
+                        n_args.insert(
+                            2,
+                            paths_f[index_u - 1]
+                                .clone()
+                                .strip_suffix(".uni")
+                                .unwrap()
+                                .to_string(),
+                        );
+                        Ok(n_args)
+                    }
+                } else {
+                    quit();
+                    Err(())
+                }
+            }
+            Err(..) => {
+                throw_fatal("Very bad 2");
+                Err(())
+        },
+        },
+        Err(e) => {
+            throw_fatal(format!("Very Bad: {e}").as_str());
+            Err(())
+        },
+    }
 }
 
 fn main() {

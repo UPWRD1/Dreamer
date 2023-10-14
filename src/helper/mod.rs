@@ -7,9 +7,10 @@ extern crate serde_yaml;
 #[macro_use]
 pub mod resource;
 pub mod shell;
+pub mod wizards;
 use crate::helper::resource::{
-    calculate_hash, check_arg_len, clear_term, input_fmt, printhelp, printusage, printusagenb,
-    printusetemplate, quit, usage_and_quit, hash_string
+    calculate_hash, check_arg_len, clear_term, hash_string, input_fmt, printhelp, printusage,
+    printusagenb, printusetemplate, quit, usage_and_quit,
 };
 
 pub(crate) mod refs;
@@ -31,6 +32,7 @@ use std::process::Command;
 use self::refs::AVAILABLE_CMDS;
 use self::resource::{extrahelp, matchcmd, read_file};
 use self::shell::init_shell;
+use self::wizards::init_cmd_wizard;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
@@ -158,7 +160,7 @@ fn run_exec(v_file: File, filepath: String, global_opts: Vec<bool>) -> Result<()
     }
 }
 
-pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
+pub fn run(argsv: &Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(RUNCMD.name, "Missing Filename!")
     }
@@ -214,8 +216,27 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
             Ok("OK".to_string())
         }
     } else {
-        usage_and_quit(INITCMD.name, "Invalid arguments!");
-        Err("Invalid Arguments!".to_string())
+        match init_cmd_wizard() {
+            Ok(filename) => {
+                let ufile_name: String = filename;
+                let ufile_name_str: &str = &ufile_name[..];
+
+                if Path::new(ufile_name_str).exists() {
+                    errprint!("File {} already Exists!", ufile_name);
+                    continue_prompt();
+                    let _ = createfile(ufile_name);
+                    Ok("OK".to_string())
+                } else {
+                    let _ = createfile(ufile_name);
+                    Ok("OK".to_string())
+                }
+            }
+            Err(..) => {
+                usage_and_quit(INITCMD.name, "Invalid arguments!");
+                Err("Invalid Arguments!".to_string())
+
+            }
+        }
     }
 }
 
@@ -399,18 +420,17 @@ pub fn load_run(
     ) {
         Err(_) => {
             quit();
-            return Err(())
+            return Err(());
         }
-        Ok(result) => match run(argsv, global_opts) {
+        Ok(result) => match run(&argsv, global_opts) {
             Err(_) => {
                 quit();
-                return Err(())
-
+                return Err(());
             }
             Ok(..) => {
                 init_shell(result.0, home_dir, result.1);
-                return Ok(())
-            },
+                return Ok(());
+            }
         },
     }
 }
@@ -496,7 +516,7 @@ fn add_exec(filepath: String, depname: &String) -> Result<(), Box<dyn Error>> {
 }
 
 pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
-    if check_arg_len(argsv.clone(), 3) {
+    if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(ADDCMD.name, "Missing Arguments!")
     }
     let dep_to_get = &argsv[2];

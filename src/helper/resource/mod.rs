@@ -15,6 +15,7 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::iter::*;
 
+use super::refs::ADDCMD;
 use super::refs::LISTCMD;
 use super::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
 
@@ -41,16 +42,16 @@ macro_rules! warnprint {
         eprint!("\n")
     };
     ($($arg:tt)*) => {{
-        eprint!("    {0} {1}", "[W]".yellow().bold(), format_args!($($arg)*))
+        eprintln!("    {0} {1}", "[W]".yellow().bold(), format_args!($($arg)*))
     }};
 }
 
 macro_rules! successprint {
     () => {
-        eprint!("\n")
+        print!("\n")
     };
     ($($arg:tt)*) => {{
-        eprint!("    {0}{1}", "[✔]".green().bold(), format_args!($($arg)*))
+        println!("    {0} {1}", "[✔]".green().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -107,8 +108,7 @@ pub fn throw_fatal(msg: &str) {
         "{0}{1}{2}",
         "FATAL ERROR: ".red().bold(),
         msg.red().bold(),
-        "
-    If you somehow see this, you probably need to reinstall unify, like now."
+        "\t If you somehow see this, you probably need to reinstall unify, like now."
             .red()
             .bold()
     );
@@ -251,6 +251,7 @@ pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
         "init" => Ok(INITCMD),
         "load" => Ok(LOADCMD),
         "list" => Ok(LISTCMD),
+        "add" => Ok(ADDCMD),
         &_ => Err("INVALID CMD".to_string()),
     }
 }
