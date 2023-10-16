@@ -11,6 +11,7 @@ use crate::helper::{usage, usagenb, verbose_check, Cmd};
 use std::{
     collections::hash_map::DefaultHasher,
     env,
+    error::Error,
     fmt::Arguments,
     fs::File,
     hash::{Hash, Hasher},
@@ -121,20 +122,6 @@ pub fn printusage(msg: &str) {
     } else if ostype == "linux" || ostype == "macos" {
         infoprint!("Usage: {0}{1}", " unify ".black(), msg.black());
     }
-}
-
-pub fn hash_string(key: &String) -> String {
-    let length = key.len() - 1;
-    let mut hash: u128 = 2166136261;
-    let key_vc: Vec<char> = key.chars().collect::<Vec<char>>();
-    println!("{}", std::u128::MAX);
-    for i in 0..=length {
-        hash ^= key_vc[i as usize] as u128 - '0' as u128;
-        println!("{hash}");
-        //16777619
-        //hash.overflowing_mul(rhs)
-    }
-    return hash.to_string();
 }
 
 pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
@@ -281,22 +268,22 @@ pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), 
 }
 
 pub fn read_file_gpath(filename: &String) -> Result<(File, String), (String, String)> {
-        let filepath1 = filename.to_string().to_owned() + ".uni.yml";
-        let file: Result<File, std::io::Error> = File::open(filepath1.clone());
-        match file {
-            Ok(v_file) => Ok((v_file, filepath1)),
-            Err(_error) => {
-                let filepath2 = filename.to_string().to_owned() + ".uni.yaml";
-                let file: Result<File, std::io::Error> = File::open(filepath2.clone());
-                match file {
-                    Ok(v_file) => Ok((v_file, filepath2)),
-                    Err(error) => Err((error.to_string(), filepath2)),
-                }
+    let filepath1 = filename.to_string().to_owned() + ".uni.yml";
+    let file: Result<File, std::io::Error> = File::open(filepath1.clone());
+    match file {
+        Ok(v_file) => Ok((v_file, filepath1)),
+        Err(_error) => {
+            let filepath2 = filename.to_string().to_owned() + ".uni.yaml";
+            let file: Result<File, std::io::Error> = File::open(filepath2.clone());
+            match file {
+                Ok(v_file) => Ok((v_file, filepath2)),
+                Err(error) => Err((error.to_string(), filepath2)),
             }
         }
+    }
 }
 
-pub fn print_file_list_main() -> Result<(char, Vec<String>), ()> {
+pub fn print_file_list_main() -> Result<(char, Vec<String>), Box<dyn Error>> {
     match env::current_dir() {
         Ok(dir) => {
             match crate::get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
@@ -316,29 +303,29 @@ pub fn print_file_list_main() -> Result<(char, Vec<String>), ()> {
                     if index_c.is_ascii_digit() {
                         if index_c as usize == 0 {
                             quit();
-                            Err(())
+                            Err("Quitted".into())
                         } else {
                             Ok((index_c, paths_f))
                         }
                     } else {
                         quit();
-                        Err(())
+                        Err("Not a digit".into())
                     }
                 }
                 Err(..) => {
                     throw_fatal("Very bad 2");
-                    Err(())
+                    Err("Very bad".into())
                 }
             }
         }
         Err(e) => {
             throw_fatal(format!("Very Bad: {e}").as_str());
-            Err(())
+            Err("oh crap".into())
         }
     }
 }
 
-pub fn print_file_list() -> Result<String, ()> {
+pub fn print_file_list() -> Result<String, Box<dyn Error>> {
     match env::current_dir() {
         Ok(dir) => {
             match crate::get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
@@ -358,31 +345,31 @@ pub fn print_file_list() -> Result<String, ()> {
                     if index_c.is_ascii_digit() {
                         if index_c as usize == 0 {
                             quit();
-                            Err(())
+                            Err("Quitted".into())
                         } else {
                             let index_u = index_c.to_digit(10).unwrap() as usize;
                             let res = paths_f[index_u - 1]
-                                    .clone()
-                                    .strip_suffix(".uni")
-                                    .unwrap()
-                                    .to_string();
-                            
+                                .clone()
+                                .strip_suffix(".uni")
+                                .unwrap()
+                                .to_string();
+
                             Ok(res)
                         }
                     } else {
                         quit();
-                        Err(())
+                        Err("Not a digit".into())
                     }
                 }
                 Err(..) => {
                     throw_fatal("Very bad 2");
-                    Err(())
+                    Err("very bad".into())
                 }
             }
         }
         Err(e) => {
             throw_fatal(format!("Very Bad: {e}").as_str());
-            Err(())
+            Err("oh crap".into())
         }
     }
 }

@@ -1,38 +1,36 @@
-/// Primary Command Logic Functions.
-// Extern imports
+/// Primary Parsing and Logic Functions.
 extern crate colored;
+use crate::helper::colored::Colorize;
 extern crate serde;
 extern crate serde_yaml;
-use serde::{Deserialize, Serialize};
 
-// Local imports
 #[macro_use]
 pub mod resource;
-pub mod exec;
-pub mod refs;
 pub mod shell;
-pub mod wizards;
-use self::{
-    colored::Colorize,
-    exec::*,
-    refs::*,
-    resource::{
-        calculate_hash, check_arg_len, clear_term, continue_prompt, extrahelp, hash_string,
-        input_fmt, matchcmd, printhelp, printusage, printusagenb, printusetemplate, quit,
-        read_file, usage_and_quit, verbose_info_print,
-    },
-    shell::*,
-    wizards::*,
+use crate::helper::resource::{
+    check_arg_len, clear_term, extrahelp, input_fmt, matchcmd, printhelp, printusage, printusagenb,
+    printusetemplate, quit, read_file, usage_and_quit,
 };
 
-// std imports
-use std::env::{self};
+pub(crate) mod refs;
+use crate::helper::refs::*;
+pub mod exec;
+use crate::helper::exec::*;
+use serde::{Deserialize, Serialize};
+//use std::env;
 use std::error::Error;
-use std::fs::{self, File};
-use std::io::{BufReader, Write};
+//use std::fs::metadata;
+use std::env::{self};
+use std::fs::File;
+use std::io::BufReader;
+use std::io::Write;
 use std::iter::*;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
+
+use self::refs::AVAILABLE_CMDS;
+use self::shell::init_shell;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
@@ -64,6 +62,15 @@ pub struct UniConfig {
     project: ProjectConfig,
     r#do: RunConfig,
     deps: DepsConfig,
+}
+
+pub fn continue_prompt() {
+    match questionprint!("Do you want to continue? (Y/N)").as_str() {
+        "y" | "Y" => {}
+        &_ => {
+            quit();
+        }
+    }
 }
 
 fn usage(cmd: &str) {
@@ -118,26 +125,14 @@ fn run_exec(v_file: File, filepath: String, global_opts: Vec<bool>) -> Result<()
                 let mut parts = command.split_whitespace();
                 let program = parts.next().ok_or("Missing command")?;
                 let args: Vec<&str> = parts.collect();
-                if cfg!(target_os = "windows") {
-                    let status = Command::new(program).args(args).status()?;
-                    if status.success() {
-                        if verbose_check(&global_opts) {
-                            infoprint!("Command '{}' executed successfully", command);
-                        }
-                        okcount += 1;
-                    } else {
-                        errprint!("Error executing command: '{}'", command);
+                let status = Command::new(program).args(args).status()?;
+                if status.success() {
+                    if verbose_check(&global_opts) {
+                        infoprint!("Command '{}' executed successfully", command);
                     }
+                    okcount += 1;
                 } else {
-                    let status = Command::new(program).args(args).status()?;
-                    if status.success() {
-                        if verbose_check(&global_opts) {
-                            infoprint!("Command '{}' executed successfully", command);
-                        }
-                        okcount += 1;
-                    } else {
-                        errprint!("Error executing command: '{}'", command);
-                    }
+                    errprint!("Error executing command: '{}'", command);
                 }
             }
 
@@ -151,7 +146,7 @@ fn run_exec(v_file: File, filepath: String, global_opts: Vec<bool>) -> Result<()
     }
 }
 
-pub fn run(argsv: &Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
+pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(RUNCMD.name, "Missing Filename!")
     }
@@ -207,29 +202,11 @@ pub fn init(argsv: Vec<String>) -> Result<std::string::String, std::string::Stri
             Ok("OK".to_string())
         }
     } else {
-        match init_cmd_wizard() {
-            Ok(filename) => {
-                let ufile_name: String = filename;
-                let ufile_name_str: &str = &ufile_name[..];
-
-                if Path::new(ufile_name_str).exists() {
-                    errprint!("File {} already Exists!", ufile_name);
-                    continue_prompt();
-                    let _ = createfile(ufile_name);
-                    Ok("OK".to_string())
-                } else {
-                    let _ = createfile(ufile_name);
-                    Ok("OK".to_string())
-                }
-            }
-            Err(..) => {
-                usage_and_quit(INITCMD.name, "Invalid arguments!");
-                Err("Invalid Arguments!".to_string())
-            }
-        }
+        usage_and_quit(INITCMD.name, "Invalid arguments!");
+        Err("Invalid Arguments!".to_string())
     }
 }
-
+/*
 fn tool_install(
     tool: Tool,
     hashname: u64,
@@ -373,7 +350,7 @@ fn load_deps(
     }
     Err("Bad File".into())
 }
-
+*/
 pub fn load(
     argsv: Vec<String>,
     env_cmds: Vec<String>,
@@ -402,7 +379,7 @@ pub fn load_and_run(
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
     global_opts: &[bool],
-) -> Result<(), ()> {
+) -> Result<(), Box<dyn Error>> {
     match load_deps(
         argsv.to_owned(),
         &env_cmds.to_vec(),
@@ -411,16 +388,50 @@ pub fn load_and_run(
     ) {
         Err(_) => {
             quit();
-            return Err(());
+            Err("Error Loading".into())
         }
-        Ok(result) => match run(&argsv, global_opts) {
+        Ok(result) => match run(argsv, global_opts) {
             Err(_) => {
                 quit();
-                return Err(());
+                Err("Error Running".into())
             }
             Ok(..) => {
                 init_shell(result.0, home_dir, result.1);
-                return Ok(());
+                Ok(())
+            }
+        },
+    }
+}
+fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
+    let reader: BufReader<File> = BufReader::new(v_file);
+    // Parse the YAML
+    let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
+    match config {
+        Err(_) => {
+            errprint!("Invalid Config file '{}'", filepath);
+            quit();
+            Err("Invalid Config".into())
+        }
+
+        Ok(config) => match way {
+            1 => {
+                infoprint!("'{}' requires the following dependancies:", filepath);
+                let mut num = 1;
+                for tool in config.deps.tools {
+                    println!("  {0}: {1}", num, tool.name);
+                    num += 1;
+                }
+                Ok(())
+            }
+
+            _ => {
+                infoprint!("Dependancies for {}:", filepath);
+                let mut num = 1;
+                for tool in config.deps.tools {
+                    println!("  {0}: {1}", num, tool.name);
+                    num += 1;
+                }
+                Ok(())
             }
         },
     }
@@ -448,38 +459,51 @@ pub fn list(argsv: Vec<String>, way: usize) -> Result<(), Box<dyn Error>> {
     Err("Bad File".into())
 }
 
-pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let dep_to_get: &String;
-    if check_arg_len(argsv.clone(), 2) {
-        match add_cmd_wizard() {
-            Ok(res) => {
-                let _result = add_exec(res.0, &res.1);
-                Ok(())
-            }
+fn add_exec(filepath: String, depname: &String) -> Result<(), Box<dyn Error>> {
+    let link = questionprint!("Enter Link for '{}':", depname);
+    println!("{depname}:{link}");
+    println!("{filepath}");
+    // Open a file with append option
+    let mut data_file = std::fs::OpenOptions::new()
+        .append(true)
+        .open(filepath)
+        .expect("cannot open file");
 
-            Err(..) => {
-                quit();
-                Ok(())
-            }
-        }
-    } else {
-        dep_to_get = &argsv[2];
-        let _ = match read_file(&argsv, 3) {
-            Ok(v_file) => {
-                let result = add_exec(v_file.1, &dep_to_get);
-                Ok(result)
-            }
-            Err(file) => {
-                errprint!("Cannot find file '{}'", file.1);
-                infoprint!(
-                    "Help: Try 'unify init {}' to create a new uni.yaml file.",
-                    file.1
-                );
-                Err(())
-            }
-        };
-        Err("Bad File".into())
+    let cont = format!(
+        "
+    - name: \"{0}\"
+      link: \"{1}\"",
+        depname, link
+    );
+    // Write to a file
+    data_file.write_all(cont.as_bytes()).expect("write failed");
+
+    println!("Appended content to a file");
+
+    Ok(())
+}
+
+pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
+    if check_arg_len(argsv.clone(), 3) {
+        usage_and_quit(ADDCMD.name, "Missing Arguments!")
     }
+    let dep_to_get = &argsv[2];
+
+    let _ = match read_file(&argsv, 3) {
+        Ok(v_file) => {
+            let result = add_exec(v_file.1, dep_to_get);
+            Ok(result)
+        }
+        Err(file) => {
+            errprint!("Cannot find file '{}'", file.1);
+            infoprint!(
+                "Help: Try 'unify init {}' to create a new uni.yaml file.",
+                file.1
+            );
+            Err(())
+        }
+    };
+    Err("Bad File".into())
 }
 
 pub fn invalid_args_notify(args: Vec<String>) {
@@ -492,6 +516,11 @@ pub fn invalid_args_notify(args: Vec<String>) {
     infoprint!("Run 'unify help' to see available commands.");
 }
 
+pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
+    // Parse arguments
+    cmd.aliases.contains(&argsv[pos].as_str())
+}
+
 pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     let paths = std::fs::read_dir(dir)?
         // Filter out all those directory entries which couldn't be read
@@ -500,14 +529,13 @@ pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
         .map(|dir_entry| dir_entry.path())
         // Filter out all paths with extensions other than `csv`
         .filter_map(|path| {
-            if path.extension().map_or(false, |ext| ext == "yaml") {
+            if path
+                .extension()
+                .map_or(false, |ext| (ext == "yaml") || ext == "yml")
+            {
                 Some(path)
             } else {
-                if path.extension().map_or(false, |ext| ext == "yml") {
-                    Some(path)
-                } else {
-                    None
-                }
+                None
             }
         })
         .collect::<Vec<_>>();
@@ -517,15 +545,18 @@ pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
 pub fn verbose_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
     if argsv.contains(&"-v".to_string()) {
         global_opts.insert(0, true);
-        return global_opts.to_vec();
+        global_opts.to_vec()
     } else {
-        return global_opts.to_vec();
+        global_opts.to_vec()
     }
 }
 
 pub fn verbose_check(global_opts: &[bool]) -> bool {
-    if global_opts.len() > 0 {
-        return global_opts[0] == true;
+    global_opts[0]
+}
+
+pub fn verbose_info_print(msg: String, global_opts: &[bool]) {
+    if verbose_check(global_opts) {
+        infoprint!("{msg}")
     }
-    return false;
 }
