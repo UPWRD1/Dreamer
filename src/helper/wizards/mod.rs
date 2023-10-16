@@ -1,7 +1,6 @@
+/// Subcommand Wizards for missing arguments.
 
-use crate::helper::{colored::Colorize, input_fmt};
-
-use super::continue_prompt;
+use super::{colored::Colorize, input_fmt, resource::print_file_list, continue_prompt};
 
 pub fn init_cmd_wizard() -> Result<String, ()> {
     let filename = questionprint!("Enter a name for your project:");
@@ -11,6 +10,14 @@ pub fn init_cmd_wizard() -> Result<String, ()> {
     Ok(filename_f)
 }
 
-pub fn add_cmd_wizard() {
-    let filename = questionprint!("Enter a .uni.yaml file");
+pub fn add_cmd_wizard() -> Result<(String, String), ()> {
+    match print_file_list() {
+        Ok(res) => {
+            let depname = questionprint!("Dependancy name");
+            Ok((res, depname))
+        }
+        Err(..) => {
+            Err(())
+        }
+    }
 }

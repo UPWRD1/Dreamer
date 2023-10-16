@@ -1,3 +1,9 @@
+/// Definition of the Cmd type, and constant values for the commands.
+
+pub trait EntryFunc {
+    fn go() -> Result<(), ()>;
+}
+
 pub struct Cmd<'a> {
     pub name: &'a str,
     pub desc: &'a str,

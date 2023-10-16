@@ -1,23 +1,23 @@
-/// Misc Helper functions for UI and other things.
+/// Helper functions and macros for UI, parsing and other things.
+// Extern Imports
 extern crate colored;
-
-use crate::helper::usage;
-use crate::helper::usagenb;
-use crate::helper::Cmd;
 use colored::Colorize;
-use std::io;
-use std::io::BufRead;
-use std::io::Write;
-//use std::io::Read;
-use std::collections::hash_map::DefaultHasher;
-use std::fmt::Arguments;
-use std::fs::File;
-use std::hash::{Hash, Hasher};
-use std::iter::*;
 
-use super::refs::ADDCMD;
-use super::refs::LISTCMD;
-use super::refs::{HELPCMD, INITCMD, LOADCMD, RUNCMD};
+// Local Imports
+use super::refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD};
+use crate::helper::{usage, usagenb, verbose_check, Cmd};
+
+// std imports
+use std::{
+    collections::hash_map::DefaultHasher,
+    env,
+    fmt::Arguments,
+    fs::File,
+    hash::{Hash, Hasher},
+    io,
+    io::{BufRead, Write},
+    iter::*,
+};
 
 macro_rules! errprint {
     () => {
@@ -129,13 +129,13 @@ pub fn hash_string(key: &String) -> String {
     let key_vc: Vec<char> = key.chars().collect::<Vec<char>>();
     println!("{}", std::u128::MAX);
     for i in 0..=length {
-      hash ^= key_vc[i as usize] as u128 - '0' as u128;
-      println!("{hash}");
-      //16777619
-      //hash.overflowing_mul(rhs)
+        hash ^= key_vc[i as usize] as u128 - '0' as u128;
+        println!("{hash}");
+        //16777619
+        //hash.overflowing_mul(rhs)
     }
     return hash.to_string();
-  }
+}
 
 pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
@@ -197,6 +197,7 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
 pub fn quit() {
     std::process::exit(0);
 }
+
 pub fn clear_term() {
     print!("\x1B[2J\x1B[1;1H")
 }
@@ -276,5 +277,116 @@ pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), 
             "Not enough Arguments!".to_string(),
             "Invalid Args".to_string(),
         ))
+    }
+}
+
+pub fn print_file_list_main() -> Result<(char, Vec<String>), ()> {
+    match env::current_dir() {
+        Ok(dir) => {
+            match crate::get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
+                Ok(paths) => {
+                    let paths_f: Vec<String> = paths
+                        .into_iter()
+                        .map(|s| {
+                            s.file_stem()
+                                .unwrap()
+                                .to_str()
+                                .map(|s| s.to_string())
+                                .unwrap()
+                        })
+                        .collect();
+                    let index = option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
+                    let index_c = index[0];
+                    if index_c.is_ascii_digit() {
+                        if index_c as usize == 0 {
+                            quit();
+                            Err(())
+                        } else {
+                            Ok((index_c, paths_f))
+                        }
+                    } else {
+                        quit();
+                        Err(())
+                    }
+                }
+                Err(..) => {
+                    throw_fatal("Very bad 2");
+                    Err(())
+                }
+            }
+        }
+        Err(e) => {
+            throw_fatal(format!("Very Bad: {e}").as_str());
+            Err(())
+        }
+    }
+}
+
+pub fn print_file_list() -> Result<String, ()> {
+    match env::current_dir() {
+        Ok(dir) => {
+            match crate::get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
+                Ok(paths) => {
+                    let paths_f: Vec<String> = paths
+                        .into_iter()
+                        .map(|s| {
+                            s.file_stem()
+                                .unwrap()
+                                .to_str()
+                                .map(|s| s.to_string())
+                                .unwrap()
+                        })
+                        .collect();
+                    let index = option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
+                    let index_c = index[0];
+                    if index_c.is_ascii_digit() {
+                        if index_c as usize == 0 {
+                            quit();
+                            Err(())
+                        } else {
+                            let index_u = index_c.to_digit(10).unwrap() as usize;
+                            let res = paths_f[index_u - 1]
+                                    .clone()
+                                    .strip_suffix(".uni")
+                                    .unwrap()
+                                    .to_string();
+                            
+                            Ok(res)
+                        }
+                    } else {
+                        quit();
+                        Err(())
+                    }
+                }
+                Err(..) => {
+                    throw_fatal("Very bad 2");
+                    Err(())
+                }
+            }
+        }
+        Err(e) => {
+            throw_fatal(format!("Very Bad: {e}").as_str());
+            Err(())
+        }
+    }
+}
+
+pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
+    // Parse arguments
+    cmd.aliases.contains(&argsv[pos].as_str())
+}
+
+pub fn continue_prompt() {
+    match questionprint!("Do you want to continue? (Y/N)").as_str() {
+        "y" | "Y" => {}
+        &_ => {
+            quit();
+        }
+    }
+}
+
+pub fn verbose_info_print(msg: String, global_opts: &[bool]) {
+    if verbose_check(global_opts) {
+        infoprint!("{msg}")
     }
 }

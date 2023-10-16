@@ -1,6 +1,7 @@
-//use super::resource::throw_fatal;
-use crate::helper::{clear_term, colored::Colorize, SELF_VERSION};
-//use crate::helper::input_fmt;
+/// Primary Logic for the Shell Interceptor
+
+use super::{clear_term, colored::Colorize, SELF_VERSION, resource::quit};
+
 use std::{
     env::{self},
     io::{stdin, stdout, Write},
@@ -10,7 +11,6 @@ use std::{
     process::{Command, Stdio},
 };
 
-use super::resource::quit;
 /*
 fn unish_exec(command: &str, args: SplitWhitespace<'_>, previous_cmd: &mut Option<Child>, commands: &mut std::iter::Peekable<std::str::Split<'_, &str>>) {
 
