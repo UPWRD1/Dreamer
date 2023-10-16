@@ -280,6 +280,22 @@ pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), 
     }
 }
 
+pub fn read_file_gpath(filename: &String) -> Result<(File, String), (String, String)> {
+        let filepath1 = filename.to_string().to_owned() + ".uni.yml";
+        let file: Result<File, std::io::Error> = File::open(filepath1.clone());
+        match file {
+            Ok(v_file) => Ok((v_file, filepath1)),
+            Err(_error) => {
+                let filepath2 = filename.to_string().to_owned() + ".uni.yaml";
+                let file: Result<File, std::io::Error> = File::open(filepath2.clone());
+                match file {
+                    Ok(v_file) => Ok((v_file, filepath2)),
+                    Err(error) => Err((error.to_string(), filepath2)),
+                }
+            }
+        }
+}
+
 pub fn print_file_list_main() -> Result<(char, Vec<String>), ()> {
     match env::current_dir() {
         Ok(dir) => {

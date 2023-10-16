@@ -13,7 +13,7 @@ pub fn init_cmd_wizard() -> Result<String, ()> {
 pub fn add_cmd_wizard() -> Result<(String, String), ()> {
     match print_file_list() {
         Ok(res) => {
-            let depname = questionprint!("Dependancy name");
+            let depname = questionprint!("Dependancy name:");
             Ok((res, depname))
         }
         Err(..) => {

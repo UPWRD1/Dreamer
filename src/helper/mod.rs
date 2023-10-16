@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 // Local imports
 #[macro_use]
 pub mod resource;
+pub mod exec;
+pub mod refs;
 pub mod shell;
 pub mod wizards;
 use self::{
@@ -22,8 +24,6 @@ use self::{
     shell::*,
     wizards::*,
 };
-pub mod exec;
-pub mod refs;
 
 // std imports
 use std::env::{self};
