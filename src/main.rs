@@ -15,6 +15,8 @@ use helper::{
 // std imports
 use std::env::{self};
 use std::iter::*;
+
+use crate::helper::force_set_true;
 /*
 Error codes:
 0000 OK
@@ -29,17 +31,20 @@ pub fn cli() {
     let args: Vec<String> = env::args().collect(); // Argument collection
     let home_dir: Result<String, env::VarError> = env::var("HOME");
     pub const ENV_COMMANDS: Vec<String> = vec![];
-    let mut global_options: Vec<bool> = vec![];
+    
+    let mut global_options: Vec<bool> = vec![false; 5];
     /*
     global options:
     0: verbose
-    1:
+    1: force
+    2: dumb (no color)
      */
     verbose_set_true(&args, &mut global_options);
+    force_set_true(&args, &mut global_options);
     if args.clone().len() == 1 {
         let n_args = synth_args(&args);
         let n_args_u = n_args.clone().expect("Asdf");
-        let n_args_str: Vec<&str> = n_args_u.iter().map(|x| String::as_str(&x)).collect();
+        let n_args_str: Vec<&str> = n_args_u.iter().map(String::as_str).collect();
         let n_args_string = n_args_str
             .iter()
             .map(|&s| s.to_string())
@@ -47,13 +52,13 @@ pub fn cli() {
         match load_and_run(n_args_string, ENV_COMMANDS, home_dir, &global_options) {
             Ok(()) => {
                 let n_args_u = n_args.clone().expect("Asdf");
-                let n_args_str: Vec<&str> = n_args_u.iter().map(|x| String::as_str(&x)).collect();
+                let n_args_str: Vec<&str> = n_args_u.iter().map(String::as_str).collect();
                 let n_args_string = n_args_str
                     .iter()
                     .map(|&s| s.to_string())
                     .collect::<Vec<String>>();
 
-                match run(&n_args_string, &global_options) {
+                match run(n_args_string, &global_options) {
                     Ok(()) => verbose_info_print("OK".to_string(), &global_options),
                     Err(..) => quit(),
                 }
@@ -69,10 +74,10 @@ pub fn cli() {
     } else {
         match args[1] {
             _ if argparse(&args, 1, INITCMD) => {
-                let _ = init(args);
+                let _ = init(args, &global_options);
             }
             _ if argparse(&args, 1, RUNCMD) => {
-                let _ = run(&args, &global_options);
+                let _ = run(args, &global_options);
             }
             _ if argparse(&args, 1, HELPCMD) => {
                 help(args);
@@ -106,11 +111,11 @@ pub fn cli() {
     */
 }
 
-fn synth_args(args: &Vec<String>) -> Result<Vec<String>, ()> {
+fn synth_args(args: &[String]) -> Result<Vec<String>, ()> {
     match print_file_list_main() {
         Ok(index_c) => {
             let index_u = index_c.0.to_digit(10).unwrap() as usize;
-            let mut n_args = args.clone();
+            let mut n_args = args.to_owned();
             n_args.push("".to_string());
             n_args.insert(
                 2,
@@ -123,7 +128,7 @@ fn synth_args(args: &Vec<String>) -> Result<Vec<String>, ()> {
             Ok(n_args)
         }
 
-        Err(()) => {
+        Err(..) => {
             quit();
             Err(())
         }
