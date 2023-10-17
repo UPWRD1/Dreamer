@@ -4,8 +4,8 @@ use crate::{
     helper::{
         check_arg_len,
         colored::Colorize,
-        continue_prompt, input_fmt, read_file,
-        resource::{calculate_hash, read_file_gpath},
+        input_fmt, read_file,
+        resource::{calculate_hash, read_file_gpath, continue_prompt},
         usage_and_quit, verbose_info_print, Tool, UniConfig,
     },
     list, quit, LOADCMD,
@@ -49,7 +49,7 @@ pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<d
     }
 }
 
-pub fn add_exec(filepath: String, depname: &String) -> Result<(), Box<dyn Error>> {
+pub fn add_exec(filepath: &String, depname: &String) -> Result<(), Box<dyn Error>> {
     let link = questionprint!("Enter link for '{}':", depname);
     match read_file_gpath(&filepath) {
         Ok(v_file) => {
@@ -125,8 +125,8 @@ pub fn load_deps(
     } else {
         let _ = list(argsv.clone(), 1);
         infoprint!("This action will download the above, and run any tasks included.");
-        continue_prompt();
-        let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2) {
+        continue_prompt(global_opts);
+        let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2, LOADCMD) {
             Ok(v_file) => {
                 let result =
                     load_exec(v_file.0, v_file.1, env_cmds.to_vec(), home_dir, global_opts);
@@ -181,13 +181,13 @@ fn tool_install(
                         Ok(())
                     } else {
                         errprint!("Error grabbing: '{}'", tool.name);
-                        continue_prompt();
+                        continue_prompt(global_opts);
                         Err("Error grabbing".into())
                     }
                     //infoprint!("Command '{}' executed successfully", command);
                 } else {
                     errprint!("Error grabbing: '{}'", tool.name);
-                    continue_prompt();
+                    continue_prompt(global_opts);
                     Err("Error grabbing".into())
                 }
             }

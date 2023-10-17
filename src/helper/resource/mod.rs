@@ -5,7 +5,7 @@ use colored::Colorize;
 
 // Local Imports
 use super::refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD};
-use crate::helper::{usage, usagenb, verbose_check, Cmd};
+use crate::helper::{usage, verbose_check, Cmd};
 
 // std imports
 use std::{
@@ -133,9 +133,9 @@ pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
 pub fn printusagenb(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
-        println!("\t Usage: {0}{1}", " ./unify ".black(), msg.black());
+        println!("\t{0}{1}{2}","Usage: ".bold(), " ./unify ".black(), msg.black());
     } else if ostype == "linux" || ostype == "macos" {
-        println!("\t Usage: {0} {1}", " unify ".black(), msg.black());
+        println!("\t{0}{1}{2}","Usage: ".bold(), " unify ".black(), msg.black());
     }
 }
 
@@ -182,6 +182,7 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
 }
 
 pub fn quit() {
+    infoprint!("Quitting...");
     std::process::exit(0);
 }
 
@@ -200,25 +201,42 @@ pub fn pause() {
     print!("\n");
 }
 */
-pub fn printhelp(cmd: &Cmd) {
-    infoprint!("{0} \t Info: {1}", cmd.name, cmd.desc);
+
+pub fn long_infoprint(longdesc: &str) {
+    print!("\t{}", "Info: ".bold());
+    let char_desc: Vec<char> = longdesc.chars().collect();
     print!("\t");
-    usagenb(cmd.name);
+    let mut numchars = 0;
+    for i in &char_desc {
+        numchars += 1;
+        if numchars > 40 && (i == &' ' || i == &'\n') {
+            print!("\n");
+            print!("        ");
+            numchars = 0;
+        } else {
+            print!("{i}");
+        }
+        
+    }
+}
+
+pub fn printhelp(cmd: &Cmd) {
+    println!("{}  \t{}", cmd.name, cmd.desc);
 }
 
 pub fn printusetemplate() {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
-        infoprint!("Usage: ./unify [--version] [--help] <command> [arguments]");
+        infoprint!("{} ./unify [--help] <command> [arguments]\n", "Usage:".bold());
     } else if ostype == "linux" || ostype == "macos" {
-        infoprint!("Usage: unify [--version] [--help] <command> [arguments]");
+        infoprint!("{} unify [--help] <command> [arguments]\n", "Usage:".bold());
     }
 }
 
 fn printextrahelp(cmd: Cmd) {
-    infoprint!("Help: {}", cmd.name);
+    infoprint!("{}{}","Help: ".bold(), cmd.name);
     printusagenb(cmd.usage);
-    println!("\t Info: {}", cmd.longdesc);
+    long_infoprint(cmd.longdesc);
 }
 
 pub fn extrahelp(cmd: &str) {
@@ -244,7 +262,11 @@ pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
     }
 }
 
-pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), (String, String)> {
+pub fn read_file(
+    argsv: &Vec<String>,
+    to_open: usize,
+    caller: Cmd,
+) -> Result<(File, String), (String, String)> {
     if to_open < argsv.len() {
         let filepath = argsv[to_open].to_string().to_owned() + ".uni.yml";
         let file: Result<File, std::io::Error> = File::open(filepath.clone());
@@ -260,6 +282,7 @@ pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), 
             }
         }
     } else {
+        usage_and_quit(caller.name, "Not Enough Argumets!");
         Err((
             "Not enough Arguments!".to_string(),
             "Invalid Args".to_string(),
@@ -267,9 +290,19 @@ pub fn read_file(argsv: &Vec<String>, to_open: usize) -> Result<(File, String), 
     }
 }
 
+pub fn read_file_gpath_no_f(filename: &String) -> Result<(File, String), (String, String)> {
+    let filepath1 = filename.to_string().to_owned();
+    let file: Result<File, std::io::Error> = File::open(filepath1.clone());
+    match file {
+        Ok(v_file) => Ok((v_file, filepath1)),
+        Err(error) => Err((error.to_string(), filepath1)),
+    }
+}
+
 pub fn read_file_gpath(filename: &String) -> Result<(File, String), (String, String)> {
     let filepath1 = filename.to_string().to_owned() + ".uni.yml";
     let file: Result<File, std::io::Error> = File::open(filepath1.clone());
+    println!("asdf");
     match file {
         Ok(v_file) => Ok((v_file, filepath1)),
         Err(_error) => {
@@ -353,7 +386,7 @@ pub fn print_file_list() -> Result<String, Box<dyn Error>> {
                                 .strip_suffix(".uni")
                                 .unwrap()
                                 .to_string();
-
+                            println!("{res}");
                             Ok(res)
                         }
                     } else {
@@ -379,11 +412,15 @@ pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
     cmd.aliases.contains(&argsv[pos].as_str())
 }
 
-pub fn continue_prompt() {
-    match questionprint!("Do you want to continue? (Y/N)").as_str() {
-        "y" | "Y" => {}
-        &_ => {
-            quit();
+pub fn continue_prompt(global_opts: &[bool]) {
+    if global_opts[1] {
+        ()
+    } else {
+        match questionprint!("Do you want to continue? (Y/N)").as_str() {
+            "y" | "Y" => {}
+            &_ => {
+                quit();
+            }
         }
     }
 }
@@ -392,4 +429,13 @@ pub fn verbose_info_print(msg: String, global_opts: &[bool]) {
     if verbose_check(global_opts) {
         infoprint!("{msg}")
     }
+}
+
+pub fn bad_file_error(filename: &String) {
+    errprint!("Cannot file file '{}'", filename);
+    infoprint!(
+        "Help: Try 'unify init {}' to create a new uni.yaml file.",
+        filename
+    );
+    quit();
 }

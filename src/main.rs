@@ -15,6 +15,8 @@ use helper::{
 // std imports
 use std::env::{self};
 use std::iter::*;
+
+use crate::helper::force_set_true;
 /*
 Error codes:
 0000 OK
@@ -29,13 +31,16 @@ pub fn cli() {
     let args: Vec<String> = env::args().collect(); // Argument collection
     let home_dir: Result<String, env::VarError> = env::var("HOME");
     pub const ENV_COMMANDS: Vec<String> = vec![];
-    let mut global_options: Vec<bool> = vec![];
+    
+    let mut global_options: Vec<bool> = vec![false; 5];
     /*
     global options:
     0: verbose
-    1:
+    1: force
+    2: dumb (no color)
      */
     verbose_set_true(&args, &mut global_options);
+    force_set_true(&args, &mut global_options);
     if args.clone().len() == 1 {
         let n_args = synth_args(&args);
         let n_args_u = n_args.clone().expect("Asdf");
@@ -69,7 +74,7 @@ pub fn cli() {
     } else {
         match args[1] {
             _ if argparse(&args, 1, INITCMD) => {
-                let _ = init(args);
+                let _ = init(args, &global_options);
             }
             _ if argparse(&args, 1, RUNCMD) => {
                 let _ = run(args, &global_options);
