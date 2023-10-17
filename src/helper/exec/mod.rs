@@ -1,14 +1,15 @@
 /// Command Execution
+// Extern imports
+use serde_yaml::Value;
 
 // Local imports
-use crate::{quit, helper::{UniConfig, input_fmt, colored::Colorize}};
+use crate::{
+    helper::{colored::Colorize, input_fmt, Tool, UniConfig},
+    quit,
+};
 
 // std imports
-use std::{
-    io::{BufReader, Write},
-    fs::File,
-    error::Error
-};
+use std::{error::Error, fs::File, io::BufReader};
 
 pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
@@ -47,12 +48,37 @@ pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<d
 
 pub fn add_exec(filepath: String, depname: &String) -> Result<(), Box<dyn Error>> {
     let link = questionprint!("Enter Link for '{}':", depname);
-    println!("{depname}:{link}");
-    println!("{filepath}");
+    let f = File::open(filepath.clone())?;
+    let reader: BufReader<File> = BufReader::new(f);
+    // Parse the YAML into DepConfig struct
+    let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
+    match config {
+        Err(_) => {
+            errprint!("File '{}' is not a valid config file", filepath);
+            quit();
+        }
+        Ok(config) => {
+            infoprint!("Getting dependancies from file: '{}'", filepath);
+            let n_tool = Tool {
+                name: depname.to_string(),
+                link: link.clone(),
+            };
+            let path = filepath.as_str();
+            let file = File::open(path).expect("File should exist");
+
+            let mut value: Value = serde_yaml::from_reader(file).unwrap();
+
+            value["deps"]["tools"] = t;
+
+            let file = File::create(path).expect("File should exist");
+            serde_yaml::to_writer(file, &value).unwrap();
+        }
+    }
+    /*
     // Open a file with append option
     let mut data_file = std::fs::OpenOptions::new()
         .append(true)
-        .open(filepath)
+        .open(filepath.clone())
         .expect("cannot open file");
 
     let cont = format!(
@@ -63,8 +89,9 @@ pub fn add_exec(filepath: String, depname: &String) -> Result<(), Box<dyn Error>
     );
     // Write to a file
     data_file.write(cont.as_bytes()).expect("write failed");
+     */
 
-    println!("Appended content to a file");
+    successprint!("{0} added to {1}", depname, &filepath);
 
     Ok(())
 }
