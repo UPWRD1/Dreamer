@@ -29,7 +29,6 @@ use std::io::Write;
 use std::iter::*;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::Command;
 
 use self::refs::AVAILABLE_CMDS;
 use self::resource::{read_file_gpath, bad_file_error};
@@ -96,47 +95,6 @@ deps:
         .expect("[!] Error while writing to file");
 
     Ok("File Created!".to_string())
-}
-
-fn run_exec(v_file: File, filepath: String, global_opts: Vec<bool>) -> Result<(), Box<dyn Error>> {
-    let reader: BufReader<File> = BufReader::new(v_file);
-    // Parse the YAML into PluConfig struct
-    let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
-    match config {
-        Err(_) => {
-            errprint!("Invalid Config file '{}'", filepath);
-            quit();
-            Err("Invalid Config".into())
-        }
-
-        Ok(config) => {
-            let mut okcount: i32 = 0;
-            let mut cmdcount: i32 = 0;
-            // Execute commands in the 'run' section
-            infoprint!("Running '{}': \n", filepath);
-            for command in config.r#do.run {
-                cmdcount += 1;
-                let mut parts = command.split_whitespace();
-                let program = parts.next().ok_or("Missing command")?;
-                let args: Vec<&str> = parts.collect();
-                let status = Command::new(program).args(args).status()?;
-                if status.success() {
-                    if verbose_check(&global_opts) {
-                        infoprint!("Command '{}' executed successfully", command);
-                    }
-                    okcount += 1;
-                } else {
-                    errprint!("Error executing command: '{}'", command);
-                }
-            }
-            if cmdcount == okcount {
-                println!();
-                successprint!("All tasks completed successfully");
-                println!();
-            }
-            Ok(())
-        }
-    }
 }
 
 pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
