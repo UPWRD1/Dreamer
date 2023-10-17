@@ -63,7 +63,7 @@ pub const ADDCMD: Cmd = Cmd {
 pub const SPINCMD: Cmd = Cmd {
     name: "spin",
     desc: "Spins up a unify environment from a unifile.",
-    longdesc: "Spins up a unify environment from a unifile. If no filename is provided, unify will prompt for one. !Unify will check to see if the file has been loaded before. If it has, it will launch the unify shell. If not, then it will load the file.",
+    longdesc: "Spins up a unify environment from a unifile. If no filename is provided, unify will prompt for one. !unify will check to see if the file has been loaded before. If it has, it will launch the unify shell. If not, then it will load the file.",
     usage: "spin [filename]",
     aliases: ["spin", "s", "--spin"],
 };

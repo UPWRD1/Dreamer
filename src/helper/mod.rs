@@ -114,12 +114,8 @@ pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
     let _ = match read_file(&argsv, 2, RUNCMD) {
         Ok(v_file) => run_exec(v_file.0, v_file.1, global_opts.to_vec()),
         Err(file) => {
-            errprint!("Cannot find file '{}'", file.1);
-            infoprint!(
-                "Help: Try 'unify init {}' to create a new uni.yaml file.",
-                file.1
-            );
-            Ok(())
+            missing_file_error(&file.1);
+            Err("Missing File".into())
         }
     };
     Ok(())
@@ -215,6 +211,20 @@ pub fn load_and_run(
     }
 }
 
+pub fn spin(argsv: Vec<String>, global_opts: &[bool], home_dir: &mut Result<String, env::VarError>) -> Result<(), Box<dyn Error>> {
+    if check_arg_len(argsv.clone(), 2) {
+        usage_and_quit(SPINCMD.name, "Missing Filename!")
+    }
+
+    let _: Result<(), String> = match read_file(&argsv, 2, RUNCMD) {
+        Ok(v_file) => { spin_exec(v_file.0,v_file.1, global_opts.to_vec(), home_dir); Ok(())},
+        Err(file) => {
+            missing_file_error(&file.1);
+            Err("Missing File".into())
+        }
+    };
+    Ok(())
+}
 
 pub fn list(argsv: Vec<String>, way: usize) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {

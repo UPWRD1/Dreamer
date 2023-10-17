@@ -5,9 +5,8 @@ use crate::{
         check_arg_len,
         colored::Colorize,
         input_fmt, read_file,
-        resource::{calculate_hash, continue_prompt, read_file_gpath, },
+        resource::{calculate_hash, continue_prompt, read_file_gpath},
         usage_and_quit, verbose_check, verbose_info_print, Tool, UniConfig,
-        
     },
     list, LOADCMD,
 };
@@ -16,7 +15,6 @@ use crate::helper::errors::{invalid_file_error, missing_file_error};
 
 // std imports
 use std::{env, error::Error, fs, fs::File, io::BufReader, process::Command};
-
 
 pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
@@ -264,6 +262,33 @@ pub fn run_exec(
                 println!();
             }
             Ok(())
+        }
+    }
+}
+
+pub fn spin_exec(v_file: File, filepath: String, global_opts: Vec<bool>, home_dir: &mut Result<String, env::VarError>)  -> Result<(), String>{
+    let reader: BufReader<File> = BufReader::new(v_file);
+    // Parse the YAML into DepConfig struct
+    let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
+    match config {
+        Err(_) => {
+            invalid_file_error(&filepath);
+            Err("Invalid Config".into())
+        }
+        Ok(config) => {
+            infoprint!("Getting dependancies from file: '{}'", filepath);
+            let hashname = calculate_hash(&config.project.name);
+
+            if cfg!(windows) {
+                let dir_loc = format!(
+                    "{0}\\.unify\\bins\\{1}\\",
+                    home_dir.as_mut().unwrap(), hashname
+                );
+                Ok(())
+            } else {
+                let dir_loc = format!("{0}/.unify/cache/{1}/", home_dir.as_mut().unwrap(), hashname);
+                Ok(())
+            }
         }
     }
 }
