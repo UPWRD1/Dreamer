@@ -1,10 +1,11 @@
 /// Helper functions and macros for UI, parsing and other things.
 // Extern Imports
 extern crate colored;
-use colored::Colorize;
+
+use crate::helper::colored::Colorize;
 
 // Local Imports
-use super::refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD};
+use super::refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD, SPINCMD};
 use crate::helper::{usage, verbose_check, Cmd};
 
 // std imports
@@ -172,18 +173,22 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
         match result_c[0] {
             '1'..='9' => return result_c,
             _ => {
-                quit();
+                quit(0);
             }
         }
     } else {
-        quit();
+        quit(0);
     }
     result_c
 }
 
-pub fn quit() {
+pub fn quit(status: i32) {
     infoprint!("Quitting...");
-    std::process::exit(0);
+    std::process::exit(status);
+}
+
+pub fn quit_silent(status: i32) {
+    std::process::exit(status);
 }
 
 pub fn clear_term() {
@@ -203,21 +208,24 @@ pub fn pause() {
 */
 
 pub fn long_infoprint(longdesc: &str) {
-    print!("\t{}", "Info: ".bold());
+    print!("\t{}", "Info: \n".bold());
     let char_desc: Vec<char> = longdesc.chars().collect();
-    print!("\t");
+    print!("\t\t");
     let mut numchars = 0;
     for i in &char_desc {
         numchars += 1;
         if numchars > 40 && (i == &' ' || i == &'\n') {
-            print!("\n");
+            print!("\n\t");
             print!("        ");
             numchars = 0;
+        } else if  i == &'!'{
+            print!("\n\n\t\t");
         } else {
             print!("{i}");
         }
         
     }
+    println!("");
 }
 
 pub fn printhelp(cmd: &Cmd) {
@@ -234,8 +242,10 @@ pub fn printusetemplate() {
 }
 
 fn printextrahelp(cmd: Cmd) {
-    infoprint!("{}{}","Help: ".bold(), cmd.name);
+    infoprint!("{}{}","Help:\t".bold(), cmd.name);
+    println!("");
     printusagenb(cmd.usage);
+    println!("");
     long_infoprint(cmd.longdesc);
 }
 
@@ -258,6 +268,7 @@ pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
         "load" => Ok(LOADCMD),
         "list" => Ok(LISTCMD),
         "add" => Ok(ADDCMD),
+        "spin" => Ok(SPINCMD),
         &_ => Err("INVALID CMD".to_string()),
     }
 }
@@ -335,13 +346,13 @@ pub fn print_file_list_main() -> Result<(char, Vec<String>), Box<dyn Error>> {
                     let index_c = index[0];
                     if index_c.is_ascii_digit() {
                         if index_c as usize == 0 {
-                            quit();
+                            quit(0);
                             Err("Quitted".into())
                         } else {
                             Ok((index_c, paths_f))
                         }
                     } else {
-                        quit();
+                        quit(1);
                         Err("Not a digit".into())
                     }
                 }
@@ -377,7 +388,7 @@ pub fn print_file_list() -> Result<String, Box<dyn Error>> {
                     let index_c = index[0];
                     if index_c.is_ascii_digit() {
                         if index_c as usize == 0 {
-                            quit();
+                            quit(0);
                             Err("Quitted".into())
                         } else {
                             let index_u = index_c.to_digit(10).unwrap() as usize;
@@ -390,7 +401,7 @@ pub fn print_file_list() -> Result<String, Box<dyn Error>> {
                             Ok(res)
                         }
                     } else {
-                        quit();
+                        quit(1);
                         Err("Not a digit".into())
                     }
                 }
@@ -419,7 +430,7 @@ pub fn continue_prompt(global_opts: &[bool]) {
         match questionprint!("Do you want to continue? (Y/N)").as_str() {
             "y" | "Y" => {}
             &_ => {
-                quit();
+                quit(0);
             }
         }
     }
@@ -431,11 +442,3 @@ pub fn verbose_info_print(msg: String, global_opts: &[bool]) {
     }
 }
 
-pub fn bad_file_error(filename: &String) {
-    errprint!("Cannot file file '{}'", filename);
-    infoprint!(
-        "Help: Try 'unify init {}' to create a new uni.yaml file.",
-        filename
-    );
-    quit();
-}

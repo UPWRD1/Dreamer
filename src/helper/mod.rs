@@ -1,37 +1,46 @@
 /// Primary Parsing and Logic Functions.
+
+// Extern imports
 extern crate colored;
-use crate::helper::colored::Colorize;
 extern crate serde;
 extern crate serde_yaml;
 
+use serde::{Deserialize, Serialize};
+use crate::helper::colored::Colorize;
+
+// Local imports
 #[macro_use]
 pub mod resource;
+use crate::helper::resource::*;
+//use crate::helper::resource::{
+//   check_arg_len, clear_term, extrahelp, input_fmt, matchcmd, printhelp, printusage,
+//    printusetemplate, quit, read_file, usage_and_quit, continue_prompt, read_file_gpath
+//};
+
 pub mod shell;
-use crate::helper::resource::{
-    check_arg_len, clear_term, extrahelp, input_fmt, matchcmd, printhelp, printusage,
-    printusetemplate, quit, read_file, usage_and_quit, continue_prompt,
-};
 
 pub(crate) mod refs;
 use crate::helper::refs::*;
+
+pub mod errors;
+use crate::helper::errors::*;
+
 pub mod exec;
 use crate::helper::exec::*;
+
 pub mod wizards;
-use serde::{Deserialize, Serialize};
 use wizards::*;
-//use std::env;
+
+// std imports
 use std::error::Error;
-//use std::fs::metadata;
 use std::env::{self};
 use std::fs::File;
-use std::io::BufReader;
 use std::io::Write;
 use std::iter::*;
 use std::path::Path;
 use std::path::PathBuf;
 
 use self::refs::AVAILABLE_CMDS;
-use self::resource::{read_file_gpath, bad_file_error};
 use self::shell::init_shell;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
@@ -167,7 +176,7 @@ pub fn load(
         global_opts,
     ) {
         Err(_) => {
-            quit();
+            quit(3);
             Err("Error Loading".into())
         }
         Ok(result) => {
@@ -190,12 +199,12 @@ pub fn load_and_run(
         global_opts,
     ) {
         Err(_) => {
-            quit();
+            quit(2);
             Err("Error Loading".into())
         }
         Ok(result) => match run(argsv, global_opts) {
             Err(_) => {
-                quit();
+                quit(2);
                 Err("Error Running".into())
             }
             Ok(..) => {
@@ -205,40 +214,7 @@ pub fn load_and_run(
         },
     }
 }
-fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
-    let reader: BufReader<File> = BufReader::new(v_file);
-    // Parse the YAML
-    let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
-    match config {
-        Err(_) => {
-            errprint!("Invalid Config file '{}'", filepath);
-            quit();
-            Err("Invalid Config".into())
-        }
 
-        Ok(config) => match way {
-            1 => {
-                infoprint!("'{}' requires the following dependancies:", filepath);
-                let mut num = 1;
-                for tool in config.deps.tools {
-                    println!("  {0}: {1}", num, tool.name);
-                    num += 1;
-                }
-                Ok(())
-            }
-
-            _ => {
-                infoprint!("Dependancies for {}:", filepath);
-                let mut num = 1;
-                for tool in config.deps.tools {
-                    println!("  {0}: {1}", num, tool.name);
-                    num += 1;
-                }
-                Ok(())
-            }
-        },
-    }
-}
 
 pub fn list(argsv: Vec<String>, way: usize) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
@@ -251,7 +227,7 @@ pub fn list(argsv: Vec<String>, way: usize) -> Result<(), Box<dyn Error>> {
             Ok(result)
         }
         Err(file) => {
-            bad_file_error(&file.1);
+            invalid_file_error(&file.1);
             Err(())
         }
     };
@@ -260,7 +236,6 @@ pub fn list(argsv: Vec<String>, way: usize) -> Result<(), Box<dyn Error>> {
 
 pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
-        //usage_and_quit(ADDCMD.name, "Missing Arguments!")
         match add_cmd_wizard() {
             Ok(vals) => {
                 let _ = add_exec(&vals.0, &vals.1);
@@ -313,7 +288,7 @@ pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
         .filter_map(|res| res.ok())
         // Map the directory entries to paths
         .map(|dir_entry| dir_entry.path())
-        // Filter out all paths with extensions other than `csv`
+        // Filter out all paths with extensions other than .yaml or .yml
         .filter_map(|path| {
             if path
                 .extension()
@@ -325,7 +300,12 @@ pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
             }
         })
         .collect::<Vec<_>>();
-    Ok(paths)
+    if !paths.is_empty() {
+        Ok(paths)
+    } else {
+        no_files_error();
+        Err("No files".into())
+    }
 }
 
 pub fn verbose_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {

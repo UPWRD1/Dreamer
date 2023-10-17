@@ -7,3 +7,6 @@ project: {
 do:
   run:
     - echo hello world
+
+deps:
+  tools:

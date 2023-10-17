@@ -20,10 +20,12 @@ use crate::helper::force_set_true;
 /*
 Error codes:
 0000 OK
-0001 File not found
-0002 Could not read file
-0003 Invalid Arguments
-0004 Internal Error
+0001 Invalid Arguments
+0002 File not found
+0003 Bad File
+0004 Fatal Internal Error
+0005 Bad User Quit
+0006 No files
 */
 
 pub fn cli() {
@@ -60,10 +62,10 @@ pub fn cli() {
 
                 match run(n_args_string, &global_options) {
                     Ok(()) => verbose_info_print("OK".to_string(), &global_options),
-                    Err(..) => quit(),
+                    Err(..) => quit(5),
                 }
             }
-            Err(..) => quit(),
+            Err(..) => quit(5),
         }
         /*
         let mut n_args = args.clone();
@@ -129,7 +131,7 @@ fn synth_args(args: &[String]) -> Result<Vec<String>, ()> {
         }
 
         Err(..) => {
-            quit();
+            quit(4);
             Err(())
         }
     }

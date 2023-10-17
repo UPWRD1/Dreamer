@@ -90,7 +90,7 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, ha
                         }
                     }
                     "exit()" => {
-                        quit();
+                        quit(0);
                     }
 
                     "clear" | "cls" => clear_term(),

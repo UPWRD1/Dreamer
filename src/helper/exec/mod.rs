@@ -5,15 +5,18 @@ use crate::{
         check_arg_len,
         colored::Colorize,
         input_fmt, read_file,
-        resource::{calculate_hash, read_file_gpath, continue_prompt},
-        usage_and_quit, verbose_info_print, Tool, UniConfig,
-        verbose_check,
+        resource::{calculate_hash, continue_prompt, read_file_gpath, },
+        usage_and_quit, verbose_check, verbose_info_print, Tool, UniConfig,
+        
     },
-    list, quit, LOADCMD,
+    list, LOADCMD,
 };
+
+use crate::helper::errors::{invalid_file_error, missing_file_error};
 
 // std imports
 use std::{env, error::Error, fs, fs::File, io::BufReader, process::Command};
+
 
 pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
@@ -21,8 +24,7 @@ pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<d
     let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            errprint!("Invalid Config file '{}'", filepath);
-            quit();
+            invalid_file_error(&filepath);
             Err("Invalid Config".into())
         }
 
@@ -72,11 +74,7 @@ pub fn add_exec(filepath: &String, depname: &String) -> Result<(), Box<dyn Error
             serde_yaml::to_writer(f, &conf_f).unwrap();
         }
         Err(file) => {
-            errprint!("Cannot find file '{}'", file.1);
-            infoprint!(
-                "Help: Try 'unify init {}' to create a new uni.yaml file.",
-                file.1
-            );
+            missing_file_error(&file.1);
         }
     };
 
@@ -97,8 +95,7 @@ pub fn load_exec(
     let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            errprint!("File '{}' is not a valid config file", filepath);
-            quit();
+            invalid_file_error(&filepath);
             Err("Invalid Config".into())
         }
         Ok(config) => {
@@ -125,7 +122,9 @@ pub fn load_deps(
         return Err("Bad File".into());
     } else {
         let _ = list(argsv.clone(), 1);
-        infoprint!("This action will download the above, and run any tasks included.");
+        if global_opts[2] {
+            infoprint!("This action will download the above, and run any tasks included.");
+        }
         continue_prompt(global_opts);
         let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2, LOADCMD) {
             Ok(v_file) => {
@@ -135,11 +134,7 @@ pub fn load_deps(
                 //Ok(result)
             }
             Err(file) => {
-                errprint!("Cannot find file '{}'", file.1);
-                infoprint!(
-                    "Help: Try 'unify init {}' to create a new uni.yaml file.",
-                    file.1
-                );
+                missing_file_error(&file.1);
                 Err(())
             }
         };
@@ -229,15 +224,17 @@ fn tool_install(
     }
 }
 
-
-pub fn run_exec(v_file: File, filepath: String, global_opts: Vec<bool>) -> Result<(), Box<dyn Error>> {
+pub fn run_exec(
+    v_file: File,
+    filepath: String,
+    global_opts: Vec<bool>,
+) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into PluConfig struct
     let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            errprint!("Invalid Config file '{}'", filepath);
-            quit();
+            missing_file_error(&filepath);
             Err("Invalid Config".into())
         }
 
