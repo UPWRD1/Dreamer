@@ -14,7 +14,14 @@ use crate::{
 use crate::helper::errors::{invalid_file_error, missing_file_error};
 
 // std imports
-use std::{env, error::Error, fs, fs::File, io::BufReader, process::Command};
+use std::{
+    env,
+    error::Error,
+    fs,
+    fs::File,
+    io::{BufReader, Write},
+    process::Command,
+};
 
 pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
@@ -64,6 +71,7 @@ pub fn add_exec(filepath: &String, depname: &String) -> Result<(), Box<dyn Error
             let mut tool_to_add: Vec<Tool> = vec![n_tool];
             //let to_w = conf_f.deps.tools.append(&mut tool_to_add);
             conf_f.deps.tools.append(&mut tool_to_add);
+            conf_f.project.isloaded = false;
             let f = std::fs::OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -87,6 +95,7 @@ pub fn load_exec(
     mut env_cmds: Vec<String>,
     mut home_dir: Result<String, env::VarError>,
     global_opts: &[bool],
+    argsv: Vec<String>,
 ) -> Result<(Vec<String>, u64), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into DepConfig struct
@@ -96,12 +105,26 @@ pub fn load_exec(
             invalid_file_error(&filepath);
             Err("Invalid Config".into())
         }
-        Ok(config) => {
-            infoprint!("Getting dependancies from file: '{}'", filepath);
+        Ok(mut config) => {
             let hashname = calculate_hash(&config.project.name);
             //println!("{}", hash_string(&config.project.name));
-            for tool in config.deps.tools {
-                let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir, global_opts);
+            if !config.project.isloaded {
+                let _ = list(argsv.clone(), 1);
+                if global_opts[2] {
+                    infoprint!("This action will download the above, and run any tasks included.");
+                }
+                continue_prompt(global_opts);
+                infoprint!("Getting dependancies from file: '{}'", filepath);
+                for tool in &config.deps.tools {
+                    let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir, global_opts);
+                }
+                config.project.isloaded = true;
+                let f = std::fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .open(filepath)
+                    .expect("Couldn't open file");
+                serde_yaml::to_writer(f, &config).unwrap();
             }
             let result = (env_cmds, hashname);
             Ok(result)
@@ -119,15 +142,17 @@ pub fn load_deps(
         usage_and_quit(LOADCMD.name, "Missing Filename!");
         return Err("Bad File".into());
     } else {
-        let _ = list(argsv.clone(), 1);
-        if global_opts[2] {
-            infoprint!("This action will download the above, and run any tasks included.");
-        }
-        continue_prompt(global_opts);
         let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2, LOADCMD) {
             Ok(v_file) => {
-                let result =
-                    load_exec(v_file.0, v_file.1, env_cmds.to_vec(), home_dir, global_opts);
+                let result = load_exec(
+                    v_file.0,
+                    v_file.1,
+                    env_cmds.to_vec(),
+                    home_dir,
+                    global_opts,
+                    argsv,
+                );
+
                 return result;
                 //Ok(result)
             }
@@ -141,7 +166,7 @@ pub fn load_deps(
 }
 
 fn tool_install(
-    tool: Tool,
+    tool: &Tool,
     hashname: u64,
     env_cmds: &mut Vec<String>,
     home_dir: &mut Result<String, env::VarError>,
@@ -152,7 +177,7 @@ fn tool_install(
         format!("Installing {0} from {1}", tool.name, tool.link),
         global_opts,
     );
-    let link = tool.link;
+    let link = &tool.link;
     let link_str = link.to_string();
     if cfg!(windows) {
         let dir_loc = format!(
@@ -266,29 +291,26 @@ pub fn run_exec(
     }
 }
 
-pub fn spin_exec(v_file: File, filepath: String, global_opts: Vec<bool>, home_dir: &mut Result<String, env::VarError>)  -> Result<(), String>{
-    let reader: BufReader<File> = BufReader::new(v_file);
-    // Parse the YAML into DepConfig struct
-    let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
-    match config {
-        Err(_) => {
-            invalid_file_error(&filepath);
-            Err("Invalid Config".into())
-        }
-        Ok(config) => {
-            infoprint!("Getting dependancies from file: '{}'", filepath);
-            let hashname = calculate_hash(&config.project.name);
+pub fn createfile(ufile_name: String) -> Result<std::string::String, std::string::String> {
+    infoprint!("Creating unifile: {}", ufile_name);
+    let mut ufile = File::create(ufile_name).expect("[!] Error encountered while creating file!");
+    ufile
+        .write_all(
+            b"project: {
+  name: \"\",
+  description: \"\",
+  version: \"0.0.0\",
+  isloaded: false,
+}
 
-            if cfg!(windows) {
-                let dir_loc = format!(
-                    "{0}\\.unify\\bins\\{1}\\",
-                    home_dir.as_mut().unwrap(), hashname
-                );
-                Ok(())
-            } else {
-                let dir_loc = format!("{0}/.unify/cache/{1}/", home_dir.as_mut().unwrap(), hashname);
-                Ok(())
-            }
-        }
-    }
+do:
+  run:
+    - echo hello world
+
+deps:
+  tools:",
+        )
+        .expect("[!] Error while writing to file");
+
+    Ok("File Created!".to_string())
 }

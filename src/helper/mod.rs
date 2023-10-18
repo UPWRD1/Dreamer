@@ -1,12 +1,11 @@
 /// Primary Parsing and Logic Functions.
-
 // Extern imports
 extern crate colored;
 extern crate serde;
 extern crate serde_yaml;
 
-use serde::{Deserialize, Serialize};
 use crate::helper::colored::Colorize;
+use serde::{Deserialize, Serialize};
 
 // Local imports
 #[macro_use]
@@ -32,10 +31,8 @@ pub mod wizards;
 use wizards::*;
 
 // std imports
-use std::error::Error;
 use std::env::{self};
-use std::fs::File;
-use std::io::Write;
+use std::error::Error;
 use std::iter::*;
 use std::path::Path;
 use std::path::PathBuf;
@@ -50,6 +47,7 @@ pub struct ProjectConfig {
     name: String,
     description: String,
     version: String,
+    isloaded: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -75,6 +73,7 @@ pub struct UniConfig {
     deps: DepsConfig,
 }
 
+
 fn usage(cmd: &str) {
     printusage(matchcmd(cmd).unwrap().usage);
 }
@@ -83,28 +82,6 @@ fn usagenb(cmd: &str) {
     printusagenb(matchcmd(cmd).unwrap().usage);
 }
 */
-fn createfile(ufile_name: String) -> Result<std::string::String, std::string::String> {
-    infoprint!("Creating unifile: {}", ufile_name);
-    let mut ufile = File::create(ufile_name).expect("[!] Error encountered while creating file!");
-    ufile
-        .write_all(
-            b"project: {
-  name: \"\",
-  description: \"\",
-  version: \"0.0.0\",
-}
-
-do:
-  run:
-    - echo hello world
-
-deps:
-  tools:",
-        )
-        .expect("[!] Error while writing to file");
-
-    Ok("File Created!".to_string())
-}
 
 pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
@@ -123,7 +100,8 @@ pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
 
 pub fn help(argsv: Vec<String>) {
     if argsv.len() == 2 {
-        infoprint!("Unify is a project dependancy grabber\n\tVersion: {}\n",
+        infoprint!(
+            "Unify is a project dependancy grabber\n\tVersion: {}\n",
             SELF_VERSION
         );
         printusetemplate();
@@ -133,13 +111,19 @@ pub fn help(argsv: Vec<String>) {
             printhelp(x);
         }
         println!("");
-        infoprint!("For more information on a command, run {}", "'unify help <command>'".black());
+        infoprint!(
+            "For more information on a command, run {}",
+            "'unify help <command>'".black()
+        );
     } else {
         extrahelp(argsv[2].as_str());
     }
 }
 
-pub fn init(argsv: Vec<String>, global_opts: &[bool]) -> Result<std::string::String, std::string::String> {
+pub fn init(
+    argsv: Vec<String>,
+    global_opts: &[bool],
+) -> Result<std::string::String, std::string::String> {
     if argsv.len() == 3 {
         let ufile_name: String = format!("{}.uni.yaml", &argsv[2]).to_owned();
         let ufile_name_str: &str = &ufile_name[..];
@@ -211,21 +195,6 @@ pub fn load_and_run(
     }
 }
 
-pub fn spin(argsv: Vec<String>, global_opts: &[bool], home_dir: &mut Result<String, env::VarError>) -> Result<(), Box<dyn Error>> {
-    if check_arg_len(argsv.clone(), 2) {
-        usage_and_quit(SPINCMD.name, "Missing Filename!")
-    }
-
-    let _: Result<(), String> = match read_file(&argsv, 2, RUNCMD) {
-        Ok(v_file) => { spin_exec(v_file.0,v_file.1, global_opts.to_vec(), home_dir); Ok(())},
-        Err(file) => {
-            missing_file_error(&file.1);
-            Err("Missing File".into())
-        }
-    };
-    Ok(())
-}
-
 pub fn list(argsv: Vec<String>, way: usize) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LISTCMD.name, "Missing Filename!")
@@ -252,9 +221,7 @@ pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
                 Ok(())
             }
 
-            Err(err) => {
-                Err(err)
-            }
+            Err(err) => Err(err),
         }
     } else {
         let dep_to_get = &argsv[2];
@@ -327,7 +294,6 @@ pub fn verbose_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bo
     }
 }
 
-
 pub fn verbose_check(global_opts: &[bool]) -> bool {
     if global_opts.len() != 0 {
         global_opts[0]
@@ -358,15 +324,13 @@ pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
             match i {
                 "-v" => {
                     verbose_set_true(argsv, global_opts);
-                },
+                }
 
                 "-f" => {
                     force_set_true(argsv, global_opts);
-                },
-
-                &_ => {
-
                 }
+
+                &_ => {}
             }
         }
     }

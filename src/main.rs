@@ -6,8 +6,8 @@ extern crate serde_yaml;
 // Local imports
 pub mod helper;
 use helper::{
-    add, get_yaml_paths, help, init, invalid_args_notify, list, load, load_and_run, spin,
-    refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD, SPINCMD},
+    add, get_yaml_paths, help, init, invalid_args_notify, list, load, load_and_run,
+    refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD},
     resource::{argparse, print_file_list_main, quit, verbose_info_print},
     run, verbose_set_true,
 };
@@ -31,7 +31,7 @@ Error codes:
 pub fn cli() {
     // Main cli function
     let args: Vec<String> = env::args().collect(); // Argument collection
-    let mut home_dir: Result<String, env::VarError> = env::var("HOME");
+    let home_dir: Result<String, env::VarError> = env::var("HOME");
     pub const ENV_COMMANDS: Vec<String> = vec![];
     
     let mut global_options: Vec<bool> = vec![false; 5];
@@ -92,10 +92,6 @@ pub fn cli() {
             }
             _ if argparse(&args, 1, ADDCMD) => {
                 let _ = add(args);
-            }
-
-            _ if argparse(&args, 1, SPINCMD) => {
-                let _ = spin(args, &global_options, &mut home_dir);
             }
             _ => invalid_args_notify(args), // Create new plufile
         }

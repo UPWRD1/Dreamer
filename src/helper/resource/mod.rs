@@ -5,7 +5,7 @@ extern crate colored;
 use crate::helper::colored::Colorize;
 
 // Local Imports
-use super::refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD, SPINCMD};
+use super::refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD};
 use crate::helper::{usage, verbose_check, Cmd};
 
 // std imports
@@ -268,7 +268,6 @@ pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
         "load" => Ok(LOADCMD),
         "list" => Ok(LISTCMD),
         "add" => Ok(ADDCMD),
-        "spin" => Ok(SPINCMD),
         &_ => Err("INVALID CMD".to_string()),
     }
 }
