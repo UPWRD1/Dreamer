@@ -1,6 +1,6 @@
 [package]
 name = "unify"
-version = "0.1.0"
+version = "0.5.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,4 +9,12 @@ edition = "2021"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_yaml = { version = "0.9.25" }
 colored = "2"
-rand = "0.8.4"
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+opt-level = 3               # Use slightly better optimizations.
+debug = 0
+lto = "thin"
+incremental = false

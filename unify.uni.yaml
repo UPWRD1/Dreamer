@@ -1,0 +1,12 @@
+project: {
+  name: "asdfasdf",
+  description: "test project",
+  version: "0.0.0",
+}
+
+do:
+  run:
+    - cargo build --verbose
+
+deps:
+  tools:
