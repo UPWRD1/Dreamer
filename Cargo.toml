@@ -5,11 +5,16 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-# [registries]
-# registries.crates-io.protocol = "git"
-
-
 [dependencies]
 serde = { version = "1.0.188", features = ["derive"] }
 serde_yaml = { version = "0.9.25" }
 colored = "2"
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+opt-level = 3               # Use slightly better optimizations.
+debug = 0
+lto = "thin"
+incremental = false
