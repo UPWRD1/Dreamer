@@ -48,7 +48,7 @@ pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<d
                 infoprint!("Dependancies for {}:", filepath);
                 let mut num = 1;
                 for tool in config.deps.tools {
-                    println!("  {0}: {1}", num, tool.name);
+                    println!("\t{0}: {1}", num, tool.name);
                     num += 1;
                 }
                 Ok(())
