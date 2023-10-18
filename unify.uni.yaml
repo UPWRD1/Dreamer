@@ -6,11 +6,7 @@ project: {
 
 do:
   run:
-    - echo hello world
+    - cargo build --verbose
 
 deps:
   tools:
-    - name: "motion"
-      link: "https://github.com/MotionLang/motion/releases/download/v1.0.0/motion"
-    - name: "test"
-      link: "asdf"
