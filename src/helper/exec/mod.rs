@@ -23,6 +23,8 @@ use std::{
     process::Command,
 };
 
+use super::errors::bad_command_error;
+
 pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML
@@ -59,7 +61,7 @@ pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<d
 
 pub fn add_exec(filepath: &String, depname: &String) -> Result<(), Box<dyn Error>> {
     let link = questionprint!("Enter link for '{}':", depname);
-    match read_file_gpath(&filepath) {
+    match read_file_gpath(filepath) {
         Ok(v_file) => {
             let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(&v_file.0);
             let mut conf_f = config.unwrap();
@@ -313,4 +315,33 @@ deps:
         .expect("[!] Error while writing to file");
 
     Ok("File Created!".to_string())
+}
+
+pub fn extension_exec(
+    argsv: Vec<String>,
+    home_dir: Result<String, env::VarError>,
+    global_opts: &[bool],
+) {
+    let mut to_exec: String;
+    let argslen = &argsv.len();
+    let ext_args: Vec<String> = argsv.clone().drain(3..*argslen).collect();
+    if cfg!(windows) {
+        to_exec = format!("{}/.unify/ext/{}.exe", home_dir.unwrap(), &argsv[2]).to_owned();
+        let f_fexec = str::replace(&to_exec, "\\", "/").to_owned();
+        to_exec = f_fexec.to_owned();
+    } else {
+        to_exec = argsv[2].to_owned();
+    }
+    verbose_info_print(format!("Executing {}", to_exec).to_string(), global_opts);
+    //println!("{}", to_exec);
+    //println!("{:?}", ext_args);
+    let status = Command::new(to_exec.clone()).args(ext_args).status();
+    match status {
+        Ok(_val) => {
+            //println!("OK: {}", val);
+        },
+        Err(..) => {
+            bad_command_error(&to_exec, global_opts);
+        },
+    }
 }

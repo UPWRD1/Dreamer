@@ -99,7 +99,7 @@ pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
 }
 
 pub fn help(argsv: Vec<String>) {
-    if argsv.len() == 2 {
+    if (argsv.len() == 2) || (argsv.len() == 1)  {
         infoprint!(
             "Unify is a project dependancy grabber\n\tVersion: {}\n",
             SELF_VERSION
@@ -110,7 +110,7 @@ pub fn help(argsv: Vec<String>) {
             print!("\t - ");
             printhelp(x);
         }
-        println!("");
+        println!();
         infoprint!(
             "For more information on a command, run {}",
             "'unify help <command>'".black()
@@ -120,7 +120,7 @@ pub fn help(argsv: Vec<String>) {
     }
 }
 
-pub fn init(
+pub fn new(
     argsv: Vec<String>,
     global_opts: &[bool],
 ) -> Result<std::string::String, std::string::String> {
@@ -138,7 +138,7 @@ pub fn init(
             Ok("OK".to_string())
         }
     } else {
-        usage_and_quit(INITCMD.name, "Invalid arguments!");
+        usage_and_quit(NEWCMD.name, "Invalid arguments!");
         Err("Invalid Arguments!".to_string())
     }
 }
@@ -234,7 +234,7 @@ pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
             Err(file) => {
                 errprint!("Cannot find file '{}'", file.1);
                 infoprint!(
-                    "Help: Try 'unify init {}' to create a new uni.yaml file.",
+                    "Help: Try 'unify new {}' to create a new uni.yaml file.",
                     file.1
                 );
                 Err(())
@@ -243,6 +243,14 @@ pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
         Err("Bad File".into())
     }
 }
+
+pub fn extension(args: Vec<String>, home_dir: Result<String, env::VarError>, global_opts: &[bool],) {
+    if check_arg_len(args.clone(), 2) {
+        usage_and_quit(EXTCMD.name, "No Extension!")
+    }
+    extension_exec(args, home_dir, global_opts)
+}
+
 
 pub fn invalid_args_notify(args: Vec<String>) {
     errprint!(
@@ -295,7 +303,7 @@ pub fn verbose_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bo
 }
 
 pub fn verbose_check(global_opts: &[bool]) -> bool {
-    if global_opts.len() != 0 {
+    if !global_opts.is_empty() {
         global_opts[0]
     } else {
         false

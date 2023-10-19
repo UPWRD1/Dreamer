@@ -1,4 +1,5 @@
-/// Definition of the Cmd type, and constant values for the commands.
+/// Defnew
+//ion of the Cmd type, and constant values for the commands.
 
 pub trait EntryFunc {
     fn go() -> Result<(), ()>;
@@ -28,12 +29,12 @@ pub const HELPCMD: Cmd = Cmd {
     aliases: ["help", "-h", "--help"],
 };
 
-pub const INITCMD: Cmd = Cmd {
-    name: "init",
+pub const NEWCMD: Cmd = Cmd {
+    name: "new",
     desc: "Creates a new .uni.yaml file",
     longdesc: "Creates a new .uni.yaml file from <filename>. If no filename is provided a wizard will launch to create one.",
-    usage: "init <filename>",
-    aliases: ["init", "i", "--init"],
+    usage: "new <filename>",
+    aliases: ["new", "n", "--new"],
 };
 
 pub const LOADCMD: Cmd = Cmd {
@@ -60,4 +61,13 @@ pub const ADDCMD: Cmd = Cmd {
     aliases: ["add", "a", "--add"],
 };
 
-pub const AVAILABLE_CMDS: [&Cmd; 6] = [&HELPCMD, &LOADCMD, &RUNCMD, &INITCMD, &LISTCMD, &ADDCMD];
+pub const EXTCMD: Cmd = Cmd {
+    name: "ext",
+    desc: "Runs an extension",
+    longdesc: "Runs an extension. Extensions are found in '$HOME/.unify/ext'. !If arguments are missing, a wizard will launch to choose one.",
+    usage: "ext <extension> [arguments]",
+    aliases: ["ext", "@", "--ext"],
+};
+
+
+pub const AVAILABLE_CMDS: [&Cmd; 7] = [&HELPCMD, &LOADCMD, &RUNCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD];

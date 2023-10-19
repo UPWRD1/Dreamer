@@ -21,3 +21,8 @@ pub fn no_files_error() {
         "Help: Try 'unify init <filename>' to create a new uni.yaml file.");
     quit_silent(6);
 }
+
+pub fn bad_command_error(command: &String, global_opts: &[bool]) {
+    errprint!("Command {} failed!", command);
+    continue_prompt(global_opts);
+}

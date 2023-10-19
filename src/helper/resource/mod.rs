@@ -5,7 +5,7 @@ extern crate colored;
 use crate::helper::colored::Colorize;
 
 // Local Imports
-use super::refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD};
+use super::refs::{ADDCMD, HELPCMD, NEWCMD, LISTCMD, LOADCMD, RUNCMD, EXTCMD};
 use crate::helper::{usage, verbose_check, Cmd};
 
 // std imports
@@ -225,7 +225,7 @@ pub fn long_infoprint(longdesc: &str) {
         }
         
     }
-    println!("");
+    println!();
 }
 
 pub fn printhelp(cmd: &Cmd) {
@@ -243,9 +243,9 @@ pub fn printusetemplate() {
 
 fn printextrahelp(cmd: Cmd) {
     infoprint!("{}{}","Help:\t".bold(), cmd.name);
-    println!("");
+    println!();
     printusagenb(cmd.usage);
-    println!("");
+    println!();
     long_infoprint(cmd.longdesc);
 }
 
@@ -264,10 +264,11 @@ pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
     match cmd {
         "help" => Ok(HELPCMD),
         "run" => Ok(RUNCMD),
-        "init" => Ok(INITCMD),
+        "new" => Ok(NEWCMD),
         "load" => Ok(LOADCMD),
         "list" => Ok(LISTCMD),
         "add" => Ok(ADDCMD),
+        "ext" => Ok(EXTCMD),
         &_ => Err("INVALID CMD".to_string()),
     }
 }
@@ -424,7 +425,6 @@ pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
 
 pub fn continue_prompt(global_opts: &[bool]) {
     if global_opts[1] {
-        ()
     } else {
         match questionprint!("Do you want to continue? (Y/N)").as_str() {
             "y" | "Y" => {}

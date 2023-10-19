@@ -6,17 +6,17 @@ extern crate serde_yaml;
 // Local imports
 pub mod helper;
 use helper::{
-    add, get_yaml_paths, help, init, invalid_args_notify, list, load, load_and_run,
-    refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD},
-    resource::{argparse, print_file_list_main, quit, verbose_info_print},
-    run, verbose_set_true,
+    add, get_yaml_paths, help, new, invalid_args_notify, list, load,
+    refs::{ADDCMD, HELPCMD, NEWCMD, LISTCMD, LOADCMD, RUNCMD},
+    resource::argparse,
+    run, verbose_set_true, extension
 };
 
 // std imports
 use std::env::{self};
 use std::iter::*;
 
-use crate::helper::force_set_true;
+use crate::helper::{force_set_true, refs::EXTCMD};
 /*
 Error codes:
 0000 OK
@@ -44,6 +44,8 @@ pub fn cli() {
     verbose_set_true(&args, &mut global_options);
     force_set_true(&args, &mut global_options);
     if args.clone().len() == 1 {
+        help(args);
+        /*
         let n_args = synth_args(&args);
         let n_args_u = n_args.clone().expect("Asdf");
         let n_args_str: Vec<&str> = n_args_u.iter().map(String::as_str).collect();
@@ -73,10 +75,11 @@ pub fn cli() {
         n_args.insert(2, "yrdfy".to_string());
         let _ = load(n_args.clone(), ENV_COMMANDS, home_dir);
         let _ = run(n_args.clone());*/
+        */
     } else {
         match args[1] {
-            _ if argparse(&args, 1, INITCMD) => {
-                let _ = init(args, &global_options);
+            _ if argparse(&args, 1, NEWCMD) => {
+                let _ = new(args, &global_options);
             }
             _ if argparse(&args, 1, RUNCMD) => {
                 let _ = run(args, &global_options);
@@ -93,26 +96,15 @@ pub fn cli() {
             _ if argparse(&args, 1, ADDCMD) => {
                 let _ = add(args);
             }
+            _ if argparse(&args, 1, EXTCMD) => {
+                extension(args, home_dir, &global_options);
+            }
+
             _ => invalid_args_notify(args), // Create new plufile
         }
     }
-
-    /*
-    if args.clone().len() == 1 {
-        //help();
-        init_shell()
-    } else if argparse(args.clone(), 1, INITCMD.aliases) {
-        let _ = init(args); // Create new plufile
-    } else if argparse(args.clone(), 1, RUNCMD.aliases) {
-        let _ = run(args.clone()); // Run plufile
-    } else if argparse(args.clone(), 1, HELPCMD.aliases) {
-        help(); //help
-    } else {
-        invalid_args_notify(args);
-    }
-    */
 }
-
+/*
 fn synth_args(args: &[String]) -> Result<Vec<String>, ()> {
     match print_file_list_main() {
         Ok(index_c) => {
@@ -123,7 +115,7 @@ fn synth_args(args: &[String]) -> Result<Vec<String>, ()> {
                 2,
                 index_c.1[index_u - 1]
                     .clone()
-                    .strip_suffix(".yrd")
+                    .strip_suffix(".uni")
                     .unwrap()
                     .to_string(),
             );
@@ -136,7 +128,7 @@ fn synth_args(args: &[String]) -> Result<Vec<String>, ()> {
         }
     }
 }
-
+*/
 fn main() {
     cli();
 }
