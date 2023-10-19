@@ -2,10 +2,11 @@ project:
   name: test project
   description: test project
   version: 0.0.0
-  isloaded: true
+  isloaded: false
 do:
   run:
   - echo hello world
+  - unify @ philip -a
 deps:
   tools:
   - name: motion

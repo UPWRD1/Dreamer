@@ -30,6 +30,7 @@ Error codes:
 
 pub fn cli() {
     // Main cli function
+    //env::set_var("RUST_BACKTRACE", "1");
     let args: Vec<String> = env::args().collect(); // Argument collection
     let home_dir: Result<String, env::VarError> = env::var("HOME");
     pub const ENV_COMMANDS: Vec<String> = vec![];

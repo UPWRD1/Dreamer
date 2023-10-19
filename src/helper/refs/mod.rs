@@ -38,7 +38,7 @@ pub const NEWCMD: Cmd = Cmd {
 };
 
 pub const LOADCMD: Cmd = Cmd {
-    name: "get",
+    name: "load",
     desc: "Load a .uni.yaml file",
     longdesc: "Loads and grabs the dependancies found in a unifile. If no filename is provided, unify will prompt for one.",
     usage: "load [filename]",

@@ -16,5 +16,10 @@ incremental = true
 [profile.release]
 opt-level = 3
 debug = 0
+codegen-units = 1
 lto = "thin"
 incremental = false
+
+[profile.release.package."*"] # +
+opt-level = 3 # +
+debug = 0

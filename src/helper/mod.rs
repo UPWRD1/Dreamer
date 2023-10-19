@@ -225,21 +225,26 @@ pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
         }
     } else {
         let dep_to_get = &argsv[2];
-
-        let _ = match read_file_gpath(&argsv[3]) {
-            Ok(v_file) => {
-                let result = add_exec(&v_file.1, dep_to_get);
-                Ok(result)
+        match argsv.len() {
+            4 => {
+                let _ = match read_file_gpath(&argsv[3]) {
+                    Ok(v_file) => {
+                        let result = add_exec(&v_file.1, dep_to_get);
+                        Ok(result)
+                    }
+                    Err(file) => {
+                        errprint!("Cannot find file '{}'", file.1);
+                        infoprint!(
+                            "Help: Try 'unify new {}' to create a new uni.yaml file.",
+                            file.1
+                        );
+                        Err(())
+                    }
+                };
             }
-            Err(file) => {
-                errprint!("Cannot find file '{}'", file.1);
-                infoprint!(
-                    "Help: Try 'unify new {}' to create a new uni.yaml file.",
-                    file.1
-                );
-                Err(())
-            }
-        };
+            _ => {usage_and_quit(ADDCMD.name, "Invalid arguments!");}
+        }
+        
         Err("Bad File".into())
     }
 }

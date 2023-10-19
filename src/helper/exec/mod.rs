@@ -5,7 +5,7 @@ use crate::{
         check_arg_len,
         colored::Colorize,
         input_fmt, read_file,
-        resource::{calculate_hash, continue_prompt, read_file_gpath},
+        resource::{calculate_hash, continue_prompt, read_file_gpath_no_f},
         usage_and_quit, verbose_check, verbose_info_print, Tool, UniConfig,
     },
     list, LOADCMD,
@@ -23,7 +23,7 @@ use std::{
     process::Command,
 };
 
-use super::errors::bad_command_error;
+use super::{errors::bad_command_error, resource::quit};
 
 pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
@@ -61,7 +61,7 @@ pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<d
 
 pub fn add_exec(filepath: &String, depname: &String) -> Result<(), Box<dyn Error>> {
     let link = questionprint!("Enter link for '{}':", depname);
-    match read_file_gpath(filepath) {
+    match read_file_gpath_no_f(filepath) {
         Ok(v_file) => {
             let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(&v_file.0);
             let mut conf_f = config.unwrap();
@@ -324,7 +324,15 @@ pub fn extension_exec(
 ) {
     let mut to_exec: String;
     let argslen = &argsv.len();
-    let ext_args: Vec<String> = argsv.clone().drain(3..*argslen).collect();
+    let ext_args: Vec<String>;
+    if argslen == &2 {
+        ext_args = vec![];
+    } else if argslen < &2 {
+        quit(4);
+        ext_args = vec![];
+    } else {
+        ext_args = argsv.clone().drain(3..*argslen).collect();
+    }
     if cfg!(windows) {
         to_exec = format!("{}/.unify/ext/{}.exe", home_dir.unwrap(), &argsv[2]).to_owned();
         let f_fexec = str::replace(&to_exec, "\\", "/").to_owned();
