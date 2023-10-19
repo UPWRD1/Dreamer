@@ -8,8 +8,8 @@ any build system, and any framework.
 
 * Lightning Fast project creation:
 ```console
-$ unify init myProject
-    [i] Creating new project 'myProject' with python template...
+$ unify new myProject
+    [i] Creating new project 'myProject' 
     [i] Done!
 ```
 
@@ -40,3 +40,11 @@ $ unify
 Hello World!
 
 ```
+
+* Extensions? Just a rust project.
+  ```console
+  $ unify install https://github.com/UPWRD1/unify.git
+[i] Fetching...
+[i] Building...
+[i] Done
+  ```
