@@ -347,9 +347,9 @@ pub fn extension_exec(
     match status {
         Ok(_val) => {
             //println!("OK: {}", val);
-        },
+        }
         Err(..) => {
             bad_command_error(&to_exec, global_opts);
-        },
+        }
     }
 }

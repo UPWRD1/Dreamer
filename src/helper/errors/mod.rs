@@ -1,5 +1,5 @@
-use crate::helper::resource::*;
 use crate::helper::colored::Colorize;
+use crate::helper::resource::*;
 
 pub fn invalid_file_error(filename: &String) {
     errprint!("Cannot find file '{}'", filename);
@@ -17,8 +17,7 @@ pub fn missing_file_error(filename: &String) {
 
 pub fn no_files_error() {
     errprint!("There are no valid .uni.yaml files!");
-    infoprint!(
-        "Help: Try 'unify init <filename>' to create a new uni.yaml file.");
+    infoprint!("Help: Try 'unify init <filename>' to create a new uni.yaml file.");
     quit_silent(6);
 }
 

@@ -6,10 +6,10 @@ extern crate serde_yaml;
 // Local imports
 pub mod helper;
 use helper::{
-    add, get_yaml_paths, help, new, invalid_args_notify, list, load,
-    refs::{ADDCMD, HELPCMD, NEWCMD, LISTCMD, LOADCMD, RUNCMD},
+    add, extension, get_yaml_paths, help, invalid_args_notify, list, load, new,
+    refs::{ADDCMD, HELPCMD, LISTCMD, LOADCMD, NEWCMD, RUNCMD},
     resource::argparse,
-    run, verbose_set_true, extension
+    run, verbose_set_true,
 };
 
 // std imports
@@ -34,7 +34,7 @@ pub fn cli() {
     let args: Vec<String> = env::args().collect(); // Argument collection
     let home_dir: Result<String, env::VarError> = env::var("HOME");
     pub const ENV_COMMANDS: Vec<String> = vec![];
-    
+
     let mut global_options: Vec<bool> = vec![false; 5];
     /*
     global options:

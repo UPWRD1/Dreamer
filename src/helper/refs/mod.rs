@@ -69,5 +69,6 @@ pub const EXTCMD: Cmd = Cmd {
     aliases: ["ext", "@", "--ext"],
 };
 
-
-pub const AVAILABLE_CMDS: [&Cmd; 7] = [&HELPCMD, &LOADCMD, &RUNCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD];
+pub const AVAILABLE_CMDS: [&Cmd; 7] = [
+    &HELPCMD, &LOADCMD, &RUNCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD,
+];

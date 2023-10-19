@@ -1,6 +1,5 @@
 /// Subcommand Wizards for missing arguments.
-
-use super::{colored::Colorize, input_fmt, resource::print_file_list, continue_prompt};
+use super::{colored::Colorize, continue_prompt, input_fmt, resource::print_file_list};
 
 use std::error::Error;
 
@@ -19,8 +18,6 @@ pub fn add_cmd_wizard() -> Result<(String, String), Box<dyn Error>> {
             Ok((res, depname))
         }
 
-        Err(..) => {
-            Err("ERR".into())
-        }
+        Err(..) => Err("ERR".into()),
     }
 }

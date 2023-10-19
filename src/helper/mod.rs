@@ -73,7 +73,6 @@ pub struct UniConfig {
     deps: DepsConfig,
 }
 
-
 fn usage(cmd: &str) {
     printusage(matchcmd(cmd).unwrap().usage);
 }
@@ -99,7 +98,7 @@ pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
 }
 
 pub fn help(argsv: Vec<String>) {
-    if (argsv.len() == 2) || (argsv.len() == 1)  {
+    if (argsv.len() == 2) || (argsv.len() == 1) {
         infoprint!(
             "Unify is a project dependancy grabber\n\tVersion: {}\n",
             SELF_VERSION
@@ -242,20 +241,21 @@ pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
                     }
                 };
             }
-            _ => {usage_and_quit(ADDCMD.name, "Invalid arguments!");}
+            _ => {
+                usage_and_quit(ADDCMD.name, "Invalid arguments!");
+            }
         }
-        
+
         Err("Bad File".into())
     }
 }
 
-pub fn extension(args: Vec<String>, home_dir: Result<String, env::VarError>, global_opts: &[bool],) {
+pub fn extension(args: Vec<String>, home_dir: Result<String, env::VarError>, global_opts: &[bool]) {
     if check_arg_len(args.clone(), 2) {
         usage_and_quit(EXTCMD.name, "No Extension!")
     }
     extension_exec(args, home_dir, global_opts)
 }
-
 
 pub fn invalid_args_notify(args: Vec<String>) {
     errprint!(

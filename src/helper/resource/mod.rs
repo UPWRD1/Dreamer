@@ -5,7 +5,7 @@ extern crate colored;
 use crate::helper::colored::Colorize;
 
 // Local Imports
-use super::refs::{ADDCMD, HELPCMD, NEWCMD, LISTCMD, LOADCMD, RUNCMD, EXTCMD};
+use super::refs::{ADDCMD, EXTCMD, HELPCMD, LISTCMD, LOADCMD, NEWCMD, RUNCMD};
 use crate::helper::{usage, verbose_check, Cmd};
 
 // std imports
@@ -134,9 +134,19 @@ pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
 pub fn printusagenb(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
-        println!("\t{0}{1}{2}","Usage: ".bold(), " ./unify ".black(), msg.black());
+        println!(
+            "\t{0}{1}{2}",
+            "Usage: ".bold(),
+            " ./unify ".black(),
+            msg.black()
+        );
     } else if ostype == "linux" || ostype == "macos" {
-        println!("\t{0}{1}{2}","Usage: ".bold(), " unify ".black(), msg.black());
+        println!(
+            "\t{0}{1}{2}",
+            "Usage: ".bold(),
+            " unify ".black(),
+            msg.black()
+        );
     }
 }
 
@@ -218,12 +228,11 @@ pub fn long_infoprint(longdesc: &str) {
             print!("\n\t");
             print!("        ");
             numchars = 0;
-        } else if  i == &'!'{
+        } else if i == &'!' {
             print!("\n\n\t\t");
         } else {
             print!("{i}");
         }
-        
     }
     println!();
 }
@@ -235,14 +244,17 @@ pub fn printhelp(cmd: &Cmd) {
 pub fn printusetemplate() {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
-        infoprint!("{} ./unify [--help] <command> [arguments]\n", "Usage:".bold());
+        infoprint!(
+            "{} ./unify [--help] <command> [arguments]\n",
+            "Usage:".bold()
+        );
     } else if ostype == "linux" || ostype == "macos" {
         infoprint!("{} unify [--help] <command> [arguments]\n", "Usage:".bold());
     }
 }
 
 fn printextrahelp(cmd: Cmd) {
-    infoprint!("{}{}","Help:\t".bold(), cmd.name);
+    infoprint!("{}{}", "Help:\t".bold(), cmd.name);
     println!();
     printusagenb(cmd.usage);
     println!();
@@ -440,4 +452,3 @@ pub fn verbose_info_print(msg: String, global_opts: &[bool]) {
         infoprint!("{msg}")
     }
 }
-
