@@ -1,45 +1,31 @@
-name: Release
-
 on:
-  workflow_dispatch:
+  release:
+    types: [created]
 
 jobs:
-  deploy:
-    name: deploy
-    # if: startsWith(github.ref, 'refs/tags/')
+  release:
+    name: release ${{ matrix.target }}
     runs-on: ubuntu-latest
-    strategy: 
+    strategy:
+      fail-fast: false
       matrix:
-        target: [ aarch64-unknown-linux-gnu, armv7-unknown-linux-gnueabihf, i686-unknown-linux-gnu, i686-unknown-linux-musl, powerpc-unknown-linux-gnu, powerpc64-unknown-linux-gnu, powerpc64le-unknown-linux-gnu,           arm-unknown-linux-gnueabi          ,x86_64-unknown-linux-gnu           ,x86_64-unknown-linux-musl]
+        include:
+          - target: x86_64-pc-windows-gnu
+            archive: zip
+          - target: x86_64-pc-windows-msvc
+            archive: zip
+          - target: aarch64-unknown-linux-gnu	
+            archive: tar.gz tar.xz tar.zst
+          - target: x86_64-unknown-linux-gnu
+            archive: tar.gz tar.xz tar.zst
+          - target: x86_64-apple-darwin
+            archive: zip
     steps:
-      - name: Checkout
-        uses: actions/checkout@v1
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-          target: ${{ matrix.target }}
-
-      - name: Build target
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          command: build
-          args: --release --target ${{ matrix.target }}
-
-      - name: Package
-        shell: bash
-        run: |
-          #strip target/${{ matrix.target }}/release/testmest
-          cd target/${{ matrix.target }}/release          
-          tar czvf ../../../testmest-${{ matrix.target }}.tar.gz testmest
-          cd -
-      - name: Publish
-        uses: softprops/action-gh-release@v1
-        # TODO: if any of the build step fails, the release should be deleted.
-        with:
-            files: 'testmest*'
+      - uses: actions/checkout@master
+      - name: Compile and release
+        uses: rust-build/rust-build.action@v1.4.3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          RUSTTARGET: ${{ matrix.target }}
+          ARCHIVE_TYPES: ${{ matrix.archive }}
