@@ -67,7 +67,7 @@ pub struct RunConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UniConfig {
+pub struct ZzzConfig {
     project: ProjectConfig,
     r#do: RunConfig,
     deps: DepsConfig,
@@ -90,7 +90,7 @@ pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
     let _ = match read_file(&argsv, 2, RUNCMD) {
         Ok(v_file) => run_exec(v_file.0, v_file.1, global_opts.to_vec()),
         Err(file) => {
-            missing_file_error(&file.1);
+            MISSINGFILEERROR.show_error(&file.1, global_opts);
             Err("Missing File".into())
         }
     };
@@ -100,7 +100,7 @@ pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
 pub fn help(argsv: Vec<String>) {
     if (argsv.len() == 2) || (argsv.len() == 1) {
         infoprint!(
-            "Unify is a project dependancy grabber\n\tVersion: {}\n",
+            "Snooze is a project dependancy grabber\n\tVersion: {}\n",
             SELF_VERSION
         );
         printusetemplate();
@@ -112,7 +112,7 @@ pub fn help(argsv: Vec<String>) {
         println!();
         infoprint!(
             "For more information on a command, run {}",
-            "'unify help <command>'".black()
+            "'zzz help <command>'".black()
         );
     } else {
         extrahelp(argsv[2].as_str());
@@ -194,29 +194,29 @@ pub fn load_and_run(
     }
 }
 
-pub fn list(argsv: Vec<String>, way: usize) -> Result<(), Box<dyn Error>> {
+pub fn list(argsv: Vec<String>, way: usize, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LISTCMD.name, "Missing Filename!")
     }
 
     let _ = match read_file(&argsv, 2, LISTCMD) {
         Ok(v_file) => {
-            let result = list_exec(v_file.0, v_file.1, way);
+            let result = list_exec(v_file.0, v_file.1, way, global_opts);
             Ok(result)
         }
         Err(file) => {
-            invalid_file_error(&file.1);
+            INVALIDFILEERR.show_error(&file.1, global_opts);
             Err(())
         }
     };
     Err("Bad File".into())
 }
 
-pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
+pub fn add(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         match add_cmd_wizard() {
             Ok(vals) => {
-                let _ = add_exec(&vals.0, &vals.1);
+                let _ = add_exec(&vals.0, &vals.1, global_opts);
                 Ok(())
             }
 
@@ -228,13 +228,13 @@ pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
             4 => {
                 let _ = match read_file_gpath(&argsv[3]) {
                     Ok(v_file) => {
-                        let result = add_exec(&v_file.1, dep_to_get);
+                        let result = add_exec(&v_file.1, dep_to_get, global_opts);
                         Ok(result)
                     }
                     Err(file) => {
                         errprint!("Cannot find file '{}'", file.1);
                         infoprint!(
-                            "Help: Try 'unify new {}' to create a new uni.yaml file.",
+                            "Help: Try 'zzz new {}' to create a new uni.yaml file.",
                             file.1
                         );
                         Err(())
@@ -264,7 +264,7 @@ pub fn invalid_args_notify(args: Vec<String>) {
         args[1].red().bold(),
         "'".red().bold()
     );
-    infoprint!("Run 'unify help' to see available commands.");
+    infoprint!("Run 'zzz help' to see available commands.");
 }
 
 pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
@@ -293,7 +293,8 @@ pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     if !paths.is_empty() {
         Ok(paths)
     } else {
-        no_files_error();
+        let dummy: Vec<bool> = vec![false];
+        NOFILESERROR.show_error(&"dummy".to_string(), &dummy);
         Err("No files".into())
     }
 }
@@ -331,8 +332,8 @@ pub fn force_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool
 }
 
 pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    let unify_flags: Vec<&str> = vec!["-v", "-f"];
-    for i in unify_flags {
+    let snooze_flags: Vec<&str> = vec!["-v", "-f"];
+    for i in snooze_flags {
         if argsv.contains(&i.to_owned().to_string()) {
             match i {
                 "-v" => {

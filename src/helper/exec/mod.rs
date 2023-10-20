@@ -6,12 +6,12 @@ use crate::{
         colored::Colorize,
         input_fmt, read_file,
         resource::{calculate_hash, continue_prompt, read_file_gpath_no_f},
-        usage_and_quit, verbose_check, verbose_info_print, Tool, UniConfig,
+        usage_and_quit, verbose_check, verbose_info_print, Tool, ZzzConfig,
     },
     list, LOADCMD,
 };
 
-use crate::helper::errors::{invalid_file_error, missing_file_error};
+use crate::helper::errors::*;
 
 // std imports
 use std::{
@@ -23,15 +23,15 @@ use std::{
     process::Command,
 };
 
-use super::{errors::bad_command_error, resource::quit};
+use super::resource::quit;
 
-pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
+pub fn list_exec(v_file: File, filepath: String, way: usize, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML
-    let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
+    let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            invalid_file_error(&filepath);
+            INVALIDFILEERR.show_error(&filepath, global_opts);
             Err("Invalid Config".into())
         }
 
@@ -59,11 +59,11 @@ pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<d
     }
 }
 
-pub fn add_exec(filepath: &String, depname: &String) -> Result<(), Box<dyn Error>> {
+pub fn add_exec(filepath: &String, depname: &String, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
     let link = questionprint!("Enter link for '{}':", depname);
     match read_file_gpath_no_f(filepath) {
         Ok(v_file) => {
-            let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(&v_file.0);
+            let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(&v_file.0);
             let mut conf_f = config.unwrap();
 
             let n_tool: Tool = Tool {
@@ -82,7 +82,7 @@ pub fn add_exec(filepath: &String, depname: &String) -> Result<(), Box<dyn Error
             serde_yaml::to_writer(f, &conf_f).unwrap();
         }
         Err(file) => {
-            missing_file_error(&file.1);
+            MISSINGFILEERROR.show_error(&file.1, global_opts);
         }
     };
 
@@ -101,17 +101,17 @@ pub fn load_exec(
 ) -> Result<(Vec<String>, u64), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into DepConfig struct
-    let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
+    let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            invalid_file_error(&filepath);
+            INVALIDFILEERR.show_error(&filepath, global_opts);
             Err("Invalid Config".into())
         }
         Ok(mut config) => {
             let hashname = calculate_hash(&config.project.name);
             //println!("{}", hash_string(&config.project.name));
             if !config.project.isloaded {
-                let _ = list(argsv.clone(), 1);
+                let _ = list(argsv.clone(), 1, global_opts);
                 if global_opts[2] {
                     infoprint!("This action will download the above, and run any tasks included.");
                 }
@@ -159,7 +159,7 @@ pub fn load_deps(
                 //Ok(result)
             }
             Err(file) => {
-                missing_file_error(&file.1);
+                MISSINGFILEERROR.show_error(&file.1, global_opts);
                 Err(())
             }
         };
@@ -183,7 +183,7 @@ fn tool_install(
     let link_str = link.to_string();
     if cfg!(windows) {
         let dir_loc = format!(
-            "{0}\\.unify\\bins\\{1}\\",
+            "{0}\\.snooze\\bins\\{1}\\",
             home_dir.as_mut().unwrap(),
             hashname
         );
@@ -218,7 +218,7 @@ fn tool_install(
             }
         }
     } else {
-        let dir_loc = format!("{0}/.unify/bins/{1}/", home_dir.as_mut().unwrap(), hashname);
+        let dir_loc = format!("{0}/.snooze/bins/{1}/", home_dir.as_mut().unwrap(), hashname);
         match fs::create_dir_all(&dir_loc) {
             Ok(..) => {
                 let link_str_f = link_str.to_string();
@@ -256,10 +256,10 @@ pub fn run_exec(
 ) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into PluConfig struct
-    let config: Result<UniConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
+    let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            missing_file_error(&filepath);
+            MISSINGFILEERROR.show_error(&filepath, &global_opts);
             Err("Invalid Config".into())
         }
 
@@ -294,7 +294,7 @@ pub fn run_exec(
 }
 
 pub fn createfile(ufile_name: String) -> Result<std::string::String, std::string::String> {
-    infoprint!("Creating unifile: {}", ufile_name);
+    infoprint!("Creating file: {}", ufile_name);
     let mut ufile = File::create(ufile_name).expect("[!] Error encountered while creating file!");
     ufile
         .write_all(
@@ -325,6 +325,18 @@ pub fn extension_exec(
     let mut to_exec: String;
     let argslen = &argsv.len();
     let ext_args: Vec<String>;
+    match argslen {
+        &2 => {
+            ext_args = vec![];
+        },
+        < 2 => {
+            quit(4);
+        ext_args = vec![];
+        },
+
+        _ => {ext_args = argsv.clone().drain(3..*argslen).collect();}
+    }
+    /*
     if argslen == &2 {
         ext_args = vec![];
     } else if argslen < &2 {
@@ -333,8 +345,9 @@ pub fn extension_exec(
     } else {
         ext_args = argsv.clone().drain(3..*argslen).collect();
     }
+    */
     if cfg!(windows) {
-        to_exec = format!("{}/.unify/ext/{}.exe", home_dir.unwrap(), &argsv[2]).to_owned();
+        to_exec = format!("{}/.snooze/ext/{}.exe", home_dir.unwrap(), &argsv[2]).to_owned();
         let f_fexec = str::replace(&to_exec, "\\", "/").to_owned();
         to_exec = f_fexec.to_owned();
     } else {
@@ -349,7 +362,7 @@ pub fn extension_exec(
             //println!("OK: {}", val);
         }
         Err(..) => {
-            bad_command_error(&to_exec, global_opts);
+            BADCOMMANDERROR.show_error(&to_exec, global_opts);
         }
     }
 }

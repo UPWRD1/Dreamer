@@ -92,10 +92,10 @@ pub fn cli() {
                 let _ = load(args, ENV_COMMANDS, home_dir, &global_options);
             }
             _ if argparse(&args, 1, LISTCMD) => {
-                let _ = list(args, 0);
+                let _ = list(args, 0, &global_options);
             }
             _ if argparse(&args, 1, ADDCMD) => {
-                let _ = add(args);
+                let _ = add(args, &global_options);
             }
             _ if argparse(&args, 1, EXTCMD) => {
                 extension(args, home_dir, &global_options);
@@ -105,31 +105,7 @@ pub fn cli() {
         }
     }
 }
-/*
-fn synth_args(args: &[String]) -> Result<Vec<String>, ()> {
-    match print_file_list_main() {
-        Ok(index_c) => {
-            let index_u = index_c.0.to_digit(10).unwrap() as usize;
-            let mut n_args = args.to_owned();
-            n_args.push("".to_string());
-            n_args.insert(
-                2,
-                index_c.1[index_u - 1]
-                    .clone()
-                    .strip_suffix(".uni")
-                    .unwrap()
-                    .to_string(),
-            );
-            Ok(n_args)
-        }
 
-        Err(..) => {
-            quit(4);
-            Err(())
-        }
-    }
-}
-*/
 fn main() {
     cli();
 }

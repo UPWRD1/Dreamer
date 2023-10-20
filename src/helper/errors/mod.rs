@@ -1,27 +1,72 @@
 use crate::helper::colored::Colorize;
+use crate::helper::errors::ZzzErrorType::{Bcerr, Iferr, Mferr, Nferr};
 use crate::helper::resource::*;
-
-pub fn invalid_file_error(filename: &String) {
-    errprint!("Cannot find file '{}'", filename);
-    infoprint!(
-        "Help: Try 'unify init {}' to create a new uni.yaml file.",
-        filename
-    );
-    quit(3);
+pub trait Printerror {
+    fn show_error(&self, filename: &str, global_opts: &[bool]);
 }
 
-pub fn missing_file_error(filename: &String) {
-    errprint!("Invalid config file '{}'", filename);
+enum ZzzErrorType {
+    Iferr,
+    Mferr,
+    Nferr,
+    Bcerr,
+}
+pub struct ZzzError<'a> {
+    exit_code: usize,
+    message: &'a str,
+    kind: ZzzErrorType,
+}
+
+
+pub const INVALIDFILEERR: ZzzError = ZzzError {
+    exit_code: 3,
+    message: "Cannot find file",
+    kind: Iferr,
+};
+
+pub const MISSINGFILEERROR: ZzzError = ZzzError {
+    exit_code: 2,
+    message: "Invalid config file",
+    kind: Mferr,
+};
+
+pub const NOFILESERROR: ZzzError = ZzzError {
+    exit_code: 6,
+    message: "There are no valid .zzz.yaml files!",
+    kind: Nferr,
+};
+
+pub const BADCOMMANDERROR: ZzzError = ZzzError {
+    exit_code: 6,
+    message: "Failed Command:",
+    kind: Bcerr,
+};
+
+impl Printerror for ZzzError<'_> {
+    fn show_error(&self, filename: &str, global_opts: &[bool]) {
+        match self.kind {
+            Iferr => {
+                let msg = format!("{}{}", self.message, filename);
+                errprint!("{}", msg);
+                infoprint!(
+                    "Help: Try 'zzz new {}' to create a new zzz.yaml file.",
+                    filename
+                );
+                quit(self.exit_code as i32);
+            }
+            Mferr => {
+                errprint!("Invalid config file '{}'", filename);
     quit(2);
-}
-
-pub fn no_files_error() {
-    errprint!("There are no valid .uni.yaml files!");
-    infoprint!("Help: Try 'unify init <filename>' to create a new uni.yaml file.");
-    quit_silent(6);
-}
-
-pub fn bad_command_error(command: &String, global_opts: &[bool]) {
-    errprint!("Command {} failed!", command);
-    continue_prompt(global_opts);
+            }
+            Nferr => {
+                errprint!("{}", self.message);
+                infoprint!("Help: Try 'zzz init <filename>' to create a new zzz.yaml file.");
+                quit_silent(6);
+            }
+            Bcerr => {
+                errprint!("Command failed!");
+                continue_prompt(global_opts);
+            }
+        }
+    }
 }

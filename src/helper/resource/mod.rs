@@ -110,7 +110,7 @@ pub fn throw_fatal(msg: &str) {
         "{0}{1}{2}",
         "FATAL ERROR: ".red().bold(),
         msg.red().bold(),
-        "\t If you somehow see this, you probably need to reinstall unify, like now."
+        "\t If you somehow see this, you probably need to reinstall snooze, like now."
             .red()
             .bold()
     );
@@ -119,9 +119,9 @@ pub fn throw_fatal(msg: &str) {
 pub fn printusage(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
-        infoprint!("Usage: {0}{1}", " ./unify ".black(), msg.black());
+        infoprint!("Usage: {0}{1}", " ./zzz ".black(), msg.black());
     } else if ostype == "linux" || ostype == "macos" {
-        infoprint!("Usage: {0}{1}", " unify ".black(), msg.black());
+        infoprint!("Usage: {0}{1}", " zzz ".black(), msg.black());
     }
 }
 
@@ -137,14 +137,14 @@ pub fn printusagenb(msg: &str) {
         println!(
             "\t{0}{1}{2}",
             "Usage: ".bold(),
-            " ./unify ".black(),
+            " ./zzz ".black(),
             msg.black()
         );
     } else if ostype == "linux" || ostype == "macos" {
         println!(
             "\t{0}{1}{2}",
             "Usage: ".bold(),
-            " unify ".black(),
+            " zzz ".black(),
             msg.black()
         );
     }
@@ -245,11 +245,11 @@ pub fn printusetemplate() {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
         infoprint!(
-            "{} ./unify [--help] <command> [arguments]\n",
+            "{} ./zzz [--help] <command> [arguments]\n",
             "Usage:".bold()
         );
     } else if ostype == "linux" || ostype == "macos" {
-        infoprint!("{} unify [--help] <command> [arguments]\n", "Usage:".bold());
+        infoprint!("{} zzz [--help] <command> [arguments]\n", "Usage:".bold());
     }
 }
 

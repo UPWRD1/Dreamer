@@ -67,7 +67,7 @@ fn unish_check_is_local(cmd: &str, env_cmds: &[String]) -> bool {
 fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, hashname: u64) {
     loop {
         let curr_dir = env::current_dir();
-        shellprint!("(~{}) [unify] @> ", curr_dir.unwrap().to_string_lossy());
+        shellprint!("(~{}) [zzz] @> ", curr_dir.unwrap().to_string_lossy());
         stdout().flush().unwrap();
 
         let mut input = String::new();
@@ -108,15 +108,9 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, ha
                             } else {
                                 Stdio::inherit()
                             };
-                            /*
-                                                            let home_dir = env::home_dir().unwrap();
-                            let home_dir_u = home_dir.display();
-                            let command_pathv: String = format!("{home_dir_u}\\unify\\{command}");
-                            infoprint!("{}", command_pathv);
-                             */
 
                             let cmd_local = format!(
-                                "{0}/.unify/bins/{1}/{2}",
+                                "{0}/.snooze/bins/{1}/{2}",
                                 home_dir.clone().unwrap(),
                                 hashname,
                                 command
@@ -176,9 +170,9 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, ha
     }
 }
 pub fn init_shell(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, hashname: u64) {
-    infoprint!("Entering Virtual Environment...");
+    infoprint!("Counting Sheep...");
     //pause();
     //clear_term();
-    infoprint!("Unify {0} (type 'exit()' to exit)", SELF_VERSION);
+    infoprint!("Snooze {0} (type 'exit()' to exit)", SELF_VERSION);
     unish_loop(env_cmds, home_dir, hashname);
 }
