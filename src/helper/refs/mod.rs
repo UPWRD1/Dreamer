@@ -10,7 +10,7 @@ pub struct Cmd<'a> {
     pub desc: &'a str,
     pub longdesc: &'a str,
     pub usage: &'a str,
-    pub aliases: [&'a str; 3],
+    pub aliases: [&'a str; 2],
 }
 
 pub const RUNCMD: Cmd = Cmd {
@@ -18,7 +18,7 @@ pub const RUNCMD: Cmd = Cmd {
     desc: "Executes a .zzz.yaml file",
     longdesc: "Runs the content in the .zzz.yaml file provide by <filename>.",
     usage: "run <filename>",
-    aliases: ["run", "r", "--run"],
+    aliases: ["run", "r"],
 };
 
 pub const HELPCMD: Cmd = Cmd {
@@ -26,7 +26,7 @@ pub const HELPCMD: Cmd = Cmd {
     desc: "This command",
     longdesc: "Provides help for other commands",
     usage: "help [command]",
-    aliases: ["help", "-h", "--help"],
+    aliases: ["help", "-h"],
 };
 
 pub const NEWCMD: Cmd = Cmd {
@@ -34,31 +34,31 @@ pub const NEWCMD: Cmd = Cmd {
     desc: "Creates a new .zzz.yaml file",
     longdesc: "Creates a new .zzz.yaml file from <filename>. If no filename is provided a wizard will launch to create one.",
     usage: "new <filename>",
-    aliases: ["new", "n", "--new"],
+    aliases: ["new", "n"],
 };
 
 pub const LOADCMD: Cmd = Cmd {
     name: "load",
     desc: "Load a .zzz.yaml file",
-    longdesc: "Loads and grabs the dependancies found in a snoozefile. If no filename is provided, zzz will prompt for one.",
+    longdesc: "Loads and grabs the dependancies found in a dreamfile. If no filename is provided, zzz will prompt for one.",
     usage: "load [filename]",
-    aliases: ["load", "l", "--load"],
+    aliases: ["load", "l"],
 };
 
 pub const LISTCMD: Cmd = Cmd {
     name: "list",
-    desc: "Lists all dependancies in a snoozefile",
-    longdesc: "Lists all dependancies in a snoozefile. If no filename is provided, zzz will prompt for one.",
+    desc: "Lists all dependancies in a dreamfile",
+    longdesc: "Lists all dependancies in a dreamfile. If no filename is provided, zzz will prompt for one.",
     usage: "list [filename]",
-    aliases: ["list", "L", "--list"],
+    aliases: ["list", "L"],
 };
 
 pub const ADDCMD: Cmd = Cmd {
     name: "add",
-    desc: "Adds a dependancy to a snoozefile",
-    longdesc: "Adds a dependancy to a snoozefile. If arguments are missing, a wizard will launch to choose one.",
+    desc: "Adds a dependancy to a dreamfile",
+    longdesc: "Adds a dependancy to a dreamfile. If arguments are missing, a wizard will launch to choose one.",
     usage: "add <dependancy> <filename>",
-    aliases: ["add", "a", "--add"],
+    aliases: ["add", "a"],
 };
 
 pub const EXTCMD: Cmd = Cmd {
@@ -66,9 +66,17 @@ pub const EXTCMD: Cmd = Cmd {
     desc: "Runs an extension",
     longdesc: "Runs an extension. Extensions are found in '$HOME/.zzz/ext'. !If arguments are missing, a wizard will launch to choose one.",
     usage: "ext <extension> [arguments]",
-    aliases: ["ext", "@", "--ext"],
+    aliases: ["ext", "@"],
 };
 
-pub const AVAILABLE_CMDS: [&Cmd; 7] = [
-    &HELPCMD, &LOADCMD, &RUNCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD,
+pub const REMOVECMD: Cmd = Cmd {
+    name: "remove",
+    desc: "Removes a dependancy from a .zzz.yaml file",
+    longdesc: "Removes a dependancy from a .zzz.yaml file provide by <filename>.",
+    usage: "remove <filename>",
+    aliases: ["remove", "rm"],
+};
+
+pub const AVAILABLE_CMDS: [&Cmd; 8] = [
+    &HELPCMD, &LOADCMD, &RUNCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD, &REMOVECMD,
 ];

@@ -12,10 +12,21 @@ pub fn init_cmd_wizard(global_opts: &[bool]) -> String {
 }
 
 pub fn add_cmd_wizard() -> Result<(String, String), Box<dyn Error>> {
-    match print_file_list() {
+    match print_file_list(0) {
         Ok(res) => {
             let depname = questionprint!("Dependancy name:");
-            Ok((res, depname))
+            Ok((res.2, depname))
+        }
+
+        Err(..) => Err("ERR".into()),
+    }
+}
+
+pub fn remove_cmd_wizard() -> Result<(String, String), Box<dyn Error>> {
+    match print_file_list(0) {
+        Ok(res) => {
+            let depname = questionprint!("Dependancy name:");
+            Ok((res.2, depname))
         }
 
         Err(..) => Err("ERR".into()),

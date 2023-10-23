@@ -6,17 +6,17 @@ extern crate serde_yaml;
 // Local imports
 pub mod helper;
 use helper::{
-    add, extension, get_yaml_paths, help, invalid_args_notify, list, load, new,
+    add, extension, help, invalid_args_notify, list, load, new,
     refs::{ADDCMD, HELPCMD, LISTCMD, LOADCMD, NEWCMD, RUNCMD},
     resource::argparse,
-    run, verbose_set_true,
+    run,
 };
 
 // std imports
 use std::env::{self};
 use std::iter::*;
 
-use crate::helper::{force_set_true, refs::EXTCMD};
+use crate::helper::{refs::{EXTCMD, REMOVECMD}, remove, resource::scan_flags};
 /*
 Error codes:
 0000 OK
@@ -42,8 +42,7 @@ pub fn cli() {
     1: force
     2: dumb (no color)
      */
-    verbose_set_true(&args, &mut global_options);
-    force_set_true(&args, &mut global_options);
+    scan_flags(&args, &mut global_options);
     if args.clone().len() == 1 {
         help(args);
         /*
@@ -99,6 +98,10 @@ pub fn cli() {
             }
             _ if argparse(&args, 1, EXTCMD) => {
                 extension(args, home_dir, &global_options);
+            }
+            
+            _ if argparse(&args, 1, REMOVECMD) => {
+                remove(args, &global_options);
             }
 
             _ => invalid_args_notify(args), // Create new plufile

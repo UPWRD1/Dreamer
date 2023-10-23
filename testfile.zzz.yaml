@@ -2,7 +2,7 @@ project:
   name: test project
   description: test project
   version: 0.0.0
-  isloaded: false
+  isloaded: true
 do:
   run:
   - echo hello world
@@ -11,3 +11,7 @@ deps:
   tools:
   - name: motion
     link: https://github.com/MotionLang/motion/releases/download/v1.0.0/motion
+  - name: a
+    link: a
+
+

@@ -4,8 +4,8 @@ use crate::{
     helper::{
         check_arg_len,
         colored::Colorize,
-        input_fmt, read_file,
-        resource::{calculate_hash, continue_prompt, read_file_gpath_no_f},
+        read_file, input_fmt,
+        resource::{calculate_hash, continue_prompt, read_file_gpath},
         usage_and_quit, verbose_check, verbose_info_print, Tool, ZzzConfig,
     },
     list, LOADCMD,
@@ -40,7 +40,7 @@ pub fn list_exec(v_file: File, filepath: String, way: usize, global_opts: &[bool
                 infoprint!("'{}' requires the following dependancies:", filepath);
                 let mut num = 1;
                 for tool in config.deps.tools {
-                    println!("  {0}: {1}", num, tool.name);
+                    println!("\t{0}: {1} \t (from {2})", num, tool.name, tool.link);
                     num += 1;
                 }
                 Ok(())
@@ -61,7 +61,7 @@ pub fn list_exec(v_file: File, filepath: String, way: usize, global_opts: &[bool
 
 pub fn add_exec(filepath: &String, depname: &String, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
     let link = questionprint!("Enter link for '{}':", depname);
-    match read_file_gpath_no_f(filepath) {
+    match read_file_gpath(filepath) {
         Ok(v_file) => {
             let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(&v_file.0);
             let mut conf_f = config.unwrap();
@@ -82,11 +82,40 @@ pub fn add_exec(filepath: &String, depname: &String, global_opts: &[bool]) -> Re
             serde_yaml::to_writer(f, &conf_f).unwrap();
         }
         Err(file) => {
+            println!("{}.", file.0);
             MISSINGFILEERROR.show_error(&file.1, global_opts);
         }
     };
 
     successprint!("'{0}' added to {1}", depname, &filepath);
+
+    Ok(())
+}
+
+pub fn remove_exec(filepath: &String, depname: &String, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
+    match read_file_gpath(filepath) {
+        Ok(v_file) => {
+            let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(&v_file.0);
+            let mut conf_f = config.unwrap();
+            let toollist = &mut conf_f.deps.tools;
+            let index = toollist.iter().position(|x| x.name == *depname).unwrap();
+            warnprint!("This will remove {} from {}", toollist[index].name, filepath);
+            continue_prompt(global_opts);
+            toollist.remove(index);
+            conf_f.project.isloaded = false;
+            let f = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(v_file.1)
+                .expect("Couldn't open file");
+            serde_yaml::to_writer(f, &conf_f).unwrap();
+        }
+        Err(file) => {
+            MISSINGFILEERROR.show_error(&file.1, global_opts);
+        }
+    };
+
+    successprint!("'{0}' removed from {1}", depname, &filepath);
 
     Ok(())
 }
@@ -325,27 +354,15 @@ pub fn extension_exec(
     let mut to_exec: String;
     let argslen = &argsv.len();
     let ext_args: Vec<String>;
+    if argslen < &2 {
+        quit(4);
+    } else {
     match argslen {
         &2 => {
             ext_args = vec![];
         },
-        < 2 => {
-            quit(4);
-        ext_args = vec![];
-        },
-
         _ => {ext_args = argsv.clone().drain(3..*argslen).collect();}
     }
-    /*
-    if argslen == &2 {
-        ext_args = vec![];
-    } else if argslen < &2 {
-        quit(4);
-        ext_args = vec![];
-    } else {
-        ext_args = argsv.clone().drain(3..*argslen).collect();
-    }
-    */
     if cfg!(windows) {
         to_exec = format!("{}/.snooze/ext/{}.exe", home_dir.unwrap(), &argsv[2]).to_owned();
         let f_fexec = str::replace(&to_exec, "\\", "/").to_owned();
@@ -365,4 +382,5 @@ pub fn extension_exec(
             BADCOMMANDERROR.show_error(&to_exec, global_opts);
         }
     }
+}
 }

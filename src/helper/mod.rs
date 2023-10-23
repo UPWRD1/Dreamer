@@ -11,10 +11,6 @@ use serde::{Deserialize, Serialize};
 #[macro_use]
 pub mod resource;
 use crate::helper::resource::*;
-//use crate::helper::resource::{
-//   check_arg_len, clear_term, extrahelp, input_fmt, matchcmd, printhelp, printusage,
-//    printusetemplate, quit, read_file, usage_and_quit, continue_prompt, read_file_gpath
-//};
 
 pub mod shell;
 
@@ -33,7 +29,6 @@ use wizards::*;
 // std imports
 use std::env::{self};
 use std::error::Error;
-use std::iter::*;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -100,7 +95,7 @@ pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
 pub fn help(argsv: Vec<String>) {
     if (argsv.len() == 2) || (argsv.len() == 1) {
         infoprint!(
-            "Snooze is a project dependancy grabber\n\tVersion: {}\n",
+            "Dreamer is a project dependancy grabber\n\tVersion: {}\n",
             SELF_VERSION
         );
         printusetemplate();
@@ -257,6 +252,21 @@ pub fn extension(args: Vec<String>, home_dir: Result<String, env::VarError>, glo
     extension_exec(args, home_dir, global_opts)
 }
 
+pub fn remove(args: Vec<String>, global_opts: &[bool]) {
+    if check_arg_len(args.clone(), 3) {
+        let _ = remove_exec(&args[3], &args[2], global_opts);
+    } else {
+        match remove_cmd_wizard() {
+            Ok(res) => {
+                let _ = remove_exec(&res.0, &res.1, global_opts);
+            }
+            Err(..) => {
+                quit(4);
+            }
+        }
+    }
+}
+
 pub fn invalid_args_notify(args: Vec<String>) {
     errprint!(
         "{0}{1}{2}",
@@ -264,89 +274,114 @@ pub fn invalid_args_notify(args: Vec<String>) {
         args[1].red().bold(),
         "'".red().bold()
     );
-    infoprint!("Run 'zzz help' to see available commands.");
-}
-
-pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
-    // Parse arguments
-    cmd.aliases.contains(&argsv[pos].as_str())
-}
-
-pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
-    let paths = std::fs::read_dir(dir)?
-        // Filter out all those directory entries which couldn't be read
-        .filter_map(|res| res.ok())
-        // Map the directory entries to paths
-        .map(|dir_entry| dir_entry.path())
-        // Filter out all paths with extensions other than .yaml or .yml
-        .filter_map(|path| {
-            if path
-                .extension()
-                .map_or(false, |ext| (ext == "yaml") || ext == "yml")
-            {
-                Some(path)
-            } else {
-                None
+    for i in AVAILABLE_CMDS {
+        match argshelp(&args, i) {
+            Ok(..) => {
+                break;
             }
-        })
-        .collect::<Vec<_>>();
-    if !paths.is_empty() {
-        Ok(paths)
-    } else {
-        let dummy: Vec<bool> = vec![false];
-        NOFILESERROR.show_error(&"dummy".to_string(), &dummy);
-        Err("No files".into())
-    }
-}
-
-pub fn verbose_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    if argsv.contains(&"-v".to_string()) {
-        global_opts.insert(0, true);
-        global_opts.to_vec()
-    } else {
-        global_opts.to_vec()
-    }
-}
-
-pub fn verbose_check(global_opts: &[bool]) -> bool {
-    if !global_opts.is_empty() {
-        global_opts[0]
-    } else {
-        false
-    }
-}
-
-pub fn verbose_info_print(msg: String, global_opts: &[bool]) {
-    if verbose_check(global_opts) {
-        infoprint!("{msg}")
-    }
-}
-
-pub fn force_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    if argsv.contains(&"-f".to_string()) {
-        global_opts.insert(1, true);
-        global_opts.to_vec()
-    } else {
-        global_opts.to_vec()
-    }
-}
-
-pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    let snooze_flags: Vec<&str> = vec!["-v", "-f"];
-    for i in snooze_flags {
-        if argsv.contains(&i.to_owned().to_string()) {
-            match i {
-                "-v" => {
-                    verbose_set_true(argsv, global_opts);
-                }
-
-                "-f" => {
-                    force_set_true(argsv, global_opts);
-                }
-
-                &_ => {}
+            Err(..) => {
+                continue;
             }
         }
     }
-    global_opts.to_vec()
+
+    infoprint!("Run 'zzz help' to see available commands.");
+}
+
+pub fn checkargs(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
+    cmd.aliases.contains(&argsv[pos].as_str())
+}
+/*
+fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, String> {
+    let (m, n) = (s.len(), t.len());
+    //println!("{m}");
+    //println!("{n}");
+    for i in 0..m {
+        let mut j = 0;
+        println!("{}", i+j);
+        while j < n && s[i + j] == t[j] {
+            j += 1;
+        }
+        if j == n {
+            if n == m {
+                println!("{:?} = {:?}", s, t);
+            } else {
+                match way {
+                    0 => {
+                        tipprint!("Did you mean {}?", String::from_iter(t));
+                        return Ok("found".into())
+                },
+                    _ => {
+                        tipprint!("Did you mean {}?", String::from_iter(s));
+                        return Ok("found".into())
+                    },
+                }
+
+            }
+            return Err("notfound".into())
+        }
+    }
+    return Err("notfound".into())
+}
+*/
+
+fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, String> {
+    let (m, n) = (s.len(), t.len());
+    //println!("{m}");
+    //println!("{n}");
+    match way {
+        0 => {
+            for i in 0..m {
+                let mut j = 0;
+                //println!("{}", i + j);
+                while j < n && s[i + j] == t[j] {
+                    j += 1;
+                    break;
+                }
+                if j == n {
+                    if n == m {
+                        println!("{:?} = {:?}", s, t);
+                        break;
+                    } else {
+                        tipprint!("Did you mean {}?", String::from_iter(t));
+                        return Ok("found".into());
+                    }
+                    //return Err("notfound".into());
+                }
+            }
+        }
+        _ => {
+            for i in 0..m {
+                let mut j = 0;
+                //println!("{}", i + j);
+                //println!("{:?}", s);
+                while j < n && s[i + j] == t[j] {
+                    j += 1;
+                }
+                if j == n {
+                    if n == m {
+                        println!("{:?} = {:?}", s, t);
+                    } else {
+                        tipprint!("Did you mean {}?", String::from_iter(s));
+                        return Ok("found".into());
+                    }
+                    return Err("notfound".into());
+                }
+            }
+        }
+    }
+    return Err("notfound".into());
+}
+
+pub fn argshelp(args: &Vec<String>, cmdtc: &Cmd) -> Result<String, String> {
+    let t: Vec<char> = cmdtc.name.chars().collect();
+    let s: Vec<char> = args[1].chars().collect();
+    let (m, n) = (s.len(), t.len());
+    if m < n {
+        //println!("a");
+        return argshelp_exec(t, s, 1); // swap(t, s)
+    } else {
+        //println!("b");
+        return argshelp_exec(s, t, 0);
+    }
 }
