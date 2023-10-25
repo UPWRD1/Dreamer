@@ -1,0 +1,15 @@
+PROJECT:
+  NAME: "TEST PROJECT"
+  DESCRIPTION: "TEST PROJECT"
+  VERSION: 0.0.0
+  IS_LOADED: true
+
+ON:
+  RUN:
+    - echo hello world
+    - unify @ phillip -a
+
+DEPENDANCIES:
+  TOOLS:
+    - name: motion
+      link: https://github.com/MotionLang/motion/releases/download/v1.0.0/motion

@@ -16,7 +16,11 @@ use helper::{
 use std::env::{self};
 use std::iter::*;
 
-use crate::helper::{refs::{EXTCMD, REMOVECMD}, remove, resource::scan_flags};
+use crate::helper::{
+    refs::{EXTCMD, REMOVECMD},
+    remove,
+    resource::scan_flags,
+};
 /*
 Error codes:
 0000 OK
@@ -45,37 +49,6 @@ pub fn cli() {
     scan_flags(&args, &mut global_options);
     if args.clone().len() == 1 {
         help(args);
-        /*
-        let n_args = synth_args(&args);
-        let n_args_u = n_args.clone().expect("Asdf");
-        let n_args_str: Vec<&str> = n_args_u.iter().map(String::as_str).collect();
-        let n_args_string = n_args_str
-            .iter()
-            .map(|&s| s.to_string())
-            .collect::<Vec<String>>();
-        match load_and_run(n_args_string, ENV_COMMANDS, home_dir, &global_options) {
-            Ok(()) => {
-                let n_args_u = n_args.clone().expect("Asdf");
-                let n_args_str: Vec<&str> = n_args_u.iter().map(String::as_str).collect();
-                let n_args_string = n_args_str
-                    .iter()
-                    .map(|&s| s.to_string())
-                    .collect::<Vec<String>>();
-
-                match run(n_args_string, &global_options) {
-                    Ok(()) => verbose_info_print("OK".to_string(), &global_options),
-                    Err(..) => quit(5),
-                }
-            }
-            Err(..) => quit(5),
-        }
-        /*
-        let mut n_args = args.clone();
-        n_args.push("".to_string());
-        n_args.insert(2, "yrdfy".to_string());
-        let _ = load(n_args.clone(), ENV_COMMANDS, home_dir);
-        let _ = run(n_args.clone());*/
-        */
     } else {
         match args[1] {
             _ if argparse(&args, 1, NEWCMD) => {
@@ -99,7 +72,7 @@ pub fn cli() {
             _ if argparse(&args, 1, EXTCMD) => {
                 extension(args, home_dir, &global_options);
             }
-            
+
             _ if argparse(&args, 1, REMOVECMD) => {
                 remove(args, &global_options);
             }

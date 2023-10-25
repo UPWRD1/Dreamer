@@ -16,7 +16,7 @@ pub struct Cmd<'a> {
 pub const RUNCMD: Cmd = Cmd {
     name: "run",
     desc: "Executes a .zzz.yaml file",
-    longdesc: "Runs the content in the .zzz.yaml file provide by <filename>.",
+    longdesc: "Runs the content in the dreamfile provide by <filename>.",
     usage: "run <filename>",
     aliases: ["run", "r"],
 };

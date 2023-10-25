@@ -6,7 +6,7 @@ use crate::helper::colored::Colorize;
 
 // Local Imports
 use super::refs::{ADDCMD, EXTCMD, HELPCMD, LISTCMD, LOADCMD, NEWCMD, RUNCMD};
-use crate::helper::{usage, Cmd, PathBuf, NOFILESERROR, errors::Printerror};
+use crate::helper::{errors::Printerror, Cmd, PathBuf, NOFILESERROR};
 
 // std imports
 use std::{
@@ -21,6 +21,7 @@ use std::{
     iter::*,
 };
 
+/// Print UI Error messages to stderr
 macro_rules! errprint {
     () => {
         eprint!("\n")
@@ -29,7 +30,7 @@ macro_rules! errprint {
         eprintln!("    {0} {1}","[!]".red().bold(), format_args!($($arg)*))
     }};
 }
-
+/// Print UI Info messages to stdout
 macro_rules! infoprint {
     () => {
         print!("\n")
@@ -39,6 +40,7 @@ macro_rules! infoprint {
     }};
 }
 
+/// Print UI warning messages to stderr
 macro_rules! warnprint {
     () => {
         eprint!("\n")
@@ -48,6 +50,7 @@ macro_rules! warnprint {
     }};
 }
 
+/// Print UI success messages to stdout
 macro_rules! successprint {
     () => {
         print!("\n")
@@ -57,7 +60,7 @@ macro_rules! successprint {
     }};
 }
 
-pub fn read_line_expect<B: BufRead>(src: &mut B) -> io::Result<String> {
+fn read_line_expect<B: BufRead>(src: &mut B) -> io::Result<String> {
     src.lines().next().map_or(
         Err(io::Error::new(
             io::ErrorKind::UnexpectedEof,
@@ -77,6 +80,7 @@ pub fn input_fmt<B: BufRead, W: Write>(
     read_line_expect(src)
 }
 
+/// Input macro to facilitate user input
 macro_rules! input {
     () => {
         (read_line_expect(&mut std::io::stdin().lock()).unwrap())
@@ -86,7 +90,7 @@ macro_rules! input {
         (input_fmt(&mut std::io::stdin().lock(), &mut std::io::stdout(), format_args!($($arg)*)).unwrap())
     };
 }
-
+/// Wrapper for input!()
 macro_rules! questionprint {
     () => {
         input!()
@@ -95,7 +99,7 @@ macro_rules! questionprint {
         input!("    {0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
     }};
 }
-
+/// Macro for printing the shell
 macro_rules! shellprint {
     () => {
         input!()
@@ -105,6 +109,7 @@ macro_rules! shellprint {
     }};
 }
 
+/// Print UI tip messages to stdout
 macro_rules! tipprint {
     () => {
         input!()
@@ -114,6 +119,7 @@ macro_rules! tipprint {
     }};
 }
 
+/// Throw a fatal internal error.
 pub fn throw_fatal(msg: &str) {
     errprint!(
         "{0}{1}{2}",
@@ -125,13 +131,18 @@ pub fn throw_fatal(msg: &str) {
     );
 }
 
-pub fn printusage(msg: &str) {
+/// helper function for usage()
+fn printusage(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
         infoprint!("Usage: {0}{1}", " ./zzz ".black(), msg.black());
     } else if ostype == "linux" || ostype == "macos" {
         infoprint!("Usage: {0}{1}", " zzz ".black(), msg.black());
     }
+}
+
+pub fn usage(cmd: &str) {
+    printusage(matchcmd(cmd).unwrap().usage);
 }
 
 pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
@@ -241,10 +252,7 @@ pub fn printhelp(cmd: &Cmd) {
 pub fn printusetemplate() {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
-        infoprint!(
-            "{} ./zzz [--help] <command> [arguments]\n",
-            "Usage:".bold()
-        );
+        infoprint!("{} ./zzz [--help] <command> [arguments]\n", "Usage:".bold());
     } else if ostype == "linux" || ostype == "macos" {
         infoprint!("{} zzz [--help] <command> [arguments]\n", "Usage:".bold());
     }
@@ -349,7 +357,9 @@ pub fn print_file_list(way: usize) -> Result<(char, Vec<String>, String), Box<dy
     if way == 0 {
         match env::current_dir() {
             Ok(dir) => {
-                match crate::helper::resource::get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
+                match crate::helper::resource::get_yaml_paths(
+                    dir.into_os_string().into_string().unwrap().as_str(),
+                ) {
                     Ok(paths) => {
                         let paths_f: Vec<String> = paths
                             .into_iter()
@@ -361,7 +371,8 @@ pub fn print_file_list(way: usize) -> Result<(char, Vec<String>, String), Box<dy
                                     .unwrap()
                             })
                             .collect();
-                        let index = option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
+                        let index =
+                            option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
                         let index_c = index[0];
                         if index_c.is_ascii_digit() {
                             if index_c as usize == 0 {
@@ -396,7 +407,9 @@ pub fn print_file_list(way: usize) -> Result<(char, Vec<String>, String), Box<dy
     } else if way == 1 {
         match env::current_dir() {
             Ok(dir) => {
-                match crate::helper::resource::get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
+                match crate::helper::resource::get_yaml_paths(
+                    dir.into_os_string().into_string().unwrap().as_str(),
+                ) {
                     Ok(paths) => {
                         let paths_f: Vec<String> = paths
                             .into_iter()
@@ -408,7 +421,8 @@ pub fn print_file_list(way: usize) -> Result<(char, Vec<String>, String), Box<dy
                                     .unwrap()
                             })
                             .collect();
-                        let index = option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
+                        let index =
+                            option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
                         let index_c = index[0];
                         if index_c.is_ascii_digit() {
                             if index_c as usize == 0 {
@@ -437,7 +451,6 @@ pub fn print_file_list(way: usize) -> Result<(char, Vec<String>, String), Box<dy
         quit(4);
         Err("INVALID".into())
     }
-    
 }
 
 pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
@@ -531,7 +544,7 @@ pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
         Ok(paths)
     } else {
         let dummy: Vec<bool> = vec![false];
-        NOFILESERROR.show_error(&"dummy".to_string(), &dummy);
+        NOFILESERROR.show_error("dummy", &dummy);
         Err("No files".into())
     }
 }

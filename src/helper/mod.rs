@@ -32,17 +32,20 @@ use std::error::Error;
 use std::path::Path;
 use std::path::PathBuf;
 
+use std::thread;
+
 use self::refs::AVAILABLE_CMDS;
 use self::shell::init_shell;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct ProjectConfig {
-    name: String,
-    description: String,
-    version: String,
-    isloaded: bool,
+    NAME: String,
+    DESCRIPTION: String,
+    VERSION: String,
+    IS_LOADED: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -52,30 +55,24 @@ pub struct Tool {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct DepsConfig {
-    tools: Vec<Tool>,
+    TOOLS: Vec<Tool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct RunConfig {
-    run: Vec<String>,
+    RUN: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct ZzzConfig {
-    project: ProjectConfig,
-    r#do: RunConfig,
-    deps: DepsConfig,
+    PROJECT: ProjectConfig,
+    ON: RunConfig,
+    DEPENDANCIES: DepsConfig,
 }
-
-fn usage(cmd: &str) {
-    printusage(matchcmd(cmd).unwrap().usage);
-}
-/*
-fn usagenb(cmd: &str) {
-    printusagenb(matchcmd(cmd).unwrap().usage);
-}
-*/
 
 pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
@@ -119,16 +116,31 @@ pub fn new(
     global_opts: &[bool],
 ) -> Result<std::string::String, std::string::String> {
     if argsv.len() == 3 {
-        let ufile_name: String = format!("{}.uni.yaml", &argsv[2]).to_owned();
+        let zfile_name_f = &argsv[2];
+        let ufile_name: String = format!("{}.zzz.yaml", zfile_name_f).to_owned();
         let ufile_name_str: &str = &ufile_name[..];
 
         if Path::new(ufile_name_str).exists() {
             errprint!("File {} already Exists!", ufile_name);
             continue_prompt(global_opts);
-            let _ = createfile(ufile_name);
+            let _ = createfile(ufile_name, zfile_name_f);
             Ok("OK".to_string())
         } else {
-            let _ = createfile(ufile_name);
+            let _ = createfile(ufile_name, zfile_name_f);
+            Ok("OK".to_string())
+        }
+    } else if argsv.len() == 2 {
+        let zfile_name_f = "dream".to_string();
+        let ufile_name: String = "dream.zzz.yaml".to_string();
+        let ufile_name_str: &str = &ufile_name[..];
+
+        if Path::new(ufile_name_str).exists() {
+            errprint!("File {} already Exists!", ufile_name);
+            continue_prompt(global_opts);
+            let _ = createfile(ufile_name, &zfile_name_f);
+            Ok("OK".to_string())
+        } else {
+            let _ = createfile(ufile_name, &zfile_name_f);
             Ok("OK".to_string())
         }
     } else {
@@ -182,7 +194,10 @@ pub fn load_and_run(
                 Err("Error Running".into())
             }
             Ok(..) => {
-                init_shell(result.0, home_dir, result.1);
+                thread::spawn(move || {
+                    init_shell(result.0, home_dir, result.1);
+                });
+
                 Ok(())
             }
         },
@@ -229,7 +244,7 @@ pub fn add(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
                     Err(file) => {
                         errprint!("Cannot find file '{}'", file.1);
                         infoprint!(
-                            "Help: Try 'zzz new {}' to create a new uni.yaml file.",
+                            "Help: Try 'zzz new {}' to create a new zzz.yaml file.",
                             file.1
                         );
                         Err(())
@@ -336,7 +351,7 @@ fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, Strin
                 //println!("{}", i + j);
                 while j < n && s[i + j] == t[j] {
                     j += 1;
-                    break;
+                    //break;
                 }
                 if j == n {
                     if n == m {
@@ -357,6 +372,7 @@ fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, Strin
                 //println!("{:?}", s);
                 while j < n && s[i + j] == t[j] {
                     j += 1;
+                    break;
                 }
                 if j == n {
                     if n == m {
@@ -370,18 +386,18 @@ fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, Strin
             }
         }
     }
-    return Err("notfound".into());
+    Err("notfound".into())
 }
 
-pub fn argshelp(args: &Vec<String>, cmdtc: &Cmd) -> Result<String, String> {
+pub fn argshelp(args: &[String], cmdtc: &Cmd) -> Result<String, String> {
     let t: Vec<char> = cmdtc.name.chars().collect();
     let s: Vec<char> = args[1].chars().collect();
     let (m, n) = (s.len(), t.len());
     if m < n {
         //println!("a");
-        return argshelp_exec(t, s, 1); // swap(t, s)
+        argshelp_exec(t, s, 1) // swap(t, s)
     } else {
         //println!("b");
-        return argshelp_exec(s, t, 0);
+        argshelp_exec(s, t, 0)
     }
 }

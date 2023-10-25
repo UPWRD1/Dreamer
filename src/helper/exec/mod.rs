@@ -4,8 +4,8 @@ use crate::{
     helper::{
         check_arg_len,
         colored::Colorize,
-        read_file, input_fmt,
-        resource::{calculate_hash, continue_prompt, read_file_gpath},
+        read_file,
+        resource::{calculate_hash, continue_prompt, input_fmt, read_file_gpath},
         usage_and_quit, verbose_check, verbose_info_print, Tool, ZzzConfig,
     },
     list, LOADCMD,
@@ -25,7 +25,12 @@ use std::{
 
 use super::resource::quit;
 
-pub fn list_exec(v_file: File, filepath: String, way: usize, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
+pub fn list_exec(
+    v_file: File,
+    filepath: String,
+    way: usize,
+    global_opts: &[bool],
+) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML
     let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
@@ -39,7 +44,7 @@ pub fn list_exec(v_file: File, filepath: String, way: usize, global_opts: &[bool
             1 => {
                 infoprint!("'{}' requires the following dependancies:", filepath);
                 let mut num = 1;
-                for tool in config.deps.tools {
+                for tool in config.DEPENDANCIES.TOOLS {
                     println!("\t{0}: {1} \t (from {2})", num, tool.name, tool.link);
                     num += 1;
                 }
@@ -49,7 +54,7 @@ pub fn list_exec(v_file: File, filepath: String, way: usize, global_opts: &[bool
             _ => {
                 infoprint!("Dependancies for {}:", filepath);
                 let mut num = 1;
-                for tool in config.deps.tools {
+                for tool in config.DEPENDANCIES.TOOLS {
                     println!("\t{0}: {1}", num, tool.name);
                     num += 1;
                 }
@@ -59,7 +64,11 @@ pub fn list_exec(v_file: File, filepath: String, way: usize, global_opts: &[bool
     }
 }
 
-pub fn add_exec(filepath: &String, depname: &String, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
+pub fn add_exec(
+    filepath: &String,
+    depname: &String,
+    global_opts: &[bool],
+) -> Result<(), Box<dyn Error>> {
     let link = questionprint!("Enter link for '{}':", depname);
     match read_file_gpath(filepath) {
         Ok(v_file) => {
@@ -72,8 +81,8 @@ pub fn add_exec(filepath: &String, depname: &String, global_opts: &[bool]) -> Re
             };
             let mut tool_to_add: Vec<Tool> = vec![n_tool];
             //let to_w = conf_f.deps.tools.append(&mut tool_to_add);
-            conf_f.deps.tools.append(&mut tool_to_add);
-            conf_f.project.isloaded = false;
+            conf_f.DEPENDANCIES.TOOLS.append(&mut tool_to_add);
+            conf_f.PROJECT.IS_LOADED = false;
             let f = std::fs::OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -92,17 +101,25 @@ pub fn add_exec(filepath: &String, depname: &String, global_opts: &[bool]) -> Re
     Ok(())
 }
 
-pub fn remove_exec(filepath: &String, depname: &String, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
+pub fn remove_exec(
+    filepath: &String,
+    depname: &String,
+    global_opts: &[bool],
+) -> Result<(), Box<dyn Error>> {
     match read_file_gpath(filepath) {
         Ok(v_file) => {
             let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(&v_file.0);
             let mut conf_f = config.unwrap();
-            let toollist = &mut conf_f.deps.tools;
+            let toollist = &mut conf_f.DEPENDANCIES.TOOLS;
             let index = toollist.iter().position(|x| x.name == *depname).unwrap();
-            warnprint!("This will remove {} from {}", toollist[index].name, filepath);
+            warnprint!(
+                "This will remove {} from {}",
+                toollist[index].name,
+                filepath
+            );
             continue_prompt(global_opts);
             toollist.remove(index);
-            conf_f.project.isloaded = false;
+            conf_f.PROJECT.IS_LOADED = false;
             let f = std::fs::OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -137,19 +154,19 @@ pub fn load_exec(
             Err("Invalid Config".into())
         }
         Ok(mut config) => {
-            let hashname = calculate_hash(&config.project.name);
+            let hashname = calculate_hash(&config.PROJECT.NAME);
             //println!("{}", hash_string(&config.project.name));
-            if !config.project.isloaded {
+            if !config.PROJECT.IS_LOADED {
                 let _ = list(argsv.clone(), 1, global_opts);
                 if global_opts[2] {
                     infoprint!("This action will download the above, and run any tasks included.");
                 }
                 continue_prompt(global_opts);
                 infoprint!("Getting dependancies from file: '{}'", filepath);
-                for tool in &config.deps.tools {
+                for tool in &config.DEPENDANCIES.TOOLS {
                     let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir, global_opts);
                 }
-                config.project.isloaded = true;
+                config.PROJECT.IS_LOADED = true;
                 let f = std::fs::OpenOptions::new()
                     .write(true)
                     .create(true)
@@ -247,7 +264,11 @@ fn tool_install(
             }
         }
     } else {
-        let dir_loc = format!("{0}/.snooze/bins/{1}/", home_dir.as_mut().unwrap(), hashname);
+        let dir_loc = format!(
+            "{0}/.snooze/bins/{1}/",
+            home_dir.as_mut().unwrap(),
+            hashname
+        );
         match fs::create_dir_all(&dir_loc) {
             Ok(..) => {
                 let link_str_f = link_str.to_string();
@@ -297,7 +318,7 @@ pub fn run_exec(
             let mut cmdcount: i32 = 0;
             // Execute commands in the 'run' section
             infoprint!("Running '{}': \n", filepath);
-            for command in config.r#do.run {
+            for command in config.ON.RUN {
                 cmdcount += 1;
                 let mut parts = command.split_whitespace();
                 let program = parts.next().ok_or("Missing command")?;
@@ -322,25 +343,30 @@ pub fn run_exec(
     }
 }
 
-pub fn createfile(ufile_name: String) -> Result<std::string::String, std::string::String> {
+pub fn createfile(
+    ufile_name: String,
+    zfile_name_f: &String,
+) -> Result<std::string::String, std::string::String> {
     infoprint!("Creating file: {}", ufile_name);
-    let mut ufile = File::create(ufile_name).expect("[!] Error encountered while creating file!");
-    ufile
-        .write_all(
-            b"project: {
-  name: \"\",
-  description: \"\",
-  version: \"0.0.0\",
-  isloaded: false,
-}
+    let mut ufile = File::create(&ufile_name).expect("[!] Error encountered while creating file!");
+    let content = format!(
+        "PROJECT: {{
+  NAME: \"{}\",
+  DESCRIPTION: \"\",
+  VERSION: \"0.0.0\",
+  IS_LOADED: false,
+}}
 
-do:
-  run:
+ON:
+  RUN:
     - echo hello world
 
-deps:
-  tools:",
-        )
+DEPENDANCIES:
+  TOOLS:",
+        &zfile_name_f
+    );
+    ufile
+        .write_all(content.as_bytes())
         .expect("[!] Error while writing to file");
 
     Ok("File Created!".to_string())
@@ -357,30 +383,32 @@ pub fn extension_exec(
     if argslen < &2 {
         quit(4);
     } else {
-    match argslen {
-        &2 => {
-            ext_args = vec![];
-        },
-        _ => {ext_args = argsv.clone().drain(3..*argslen).collect();}
-    }
-    if cfg!(windows) {
-        to_exec = format!("{}/.snooze/ext/{}.exe", home_dir.unwrap(), &argsv[2]).to_owned();
-        let f_fexec = str::replace(&to_exec, "\\", "/").to_owned();
-        to_exec = f_fexec.to_owned();
-    } else {
-        to_exec = argsv[2].to_owned();
-    }
-    verbose_info_print(format!("Executing {}", to_exec).to_string(), global_opts);
-    //println!("{}", to_exec);
-    //println!("{:?}", ext_args);
-    let status = Command::new(to_exec.clone()).args(ext_args).status();
-    match status {
-        Ok(_val) => {
-            //println!("OK: {}", val);
+        match argslen {
+            &2 => {
+                ext_args = vec![];
+            }
+            _ => {
+                ext_args = argsv.clone().drain(3..*argslen).collect();
+            }
         }
-        Err(..) => {
-            BADCOMMANDERROR.show_error(&to_exec, global_opts);
+        if cfg!(windows) {
+            to_exec = format!("{}/.snooze/ext/{}.exe", home_dir.unwrap(), &argsv[2]).to_owned();
+            let f_fexec = str::replace(&to_exec, "\\", "/").to_owned();
+            to_exec = f_fexec.to_owned();
+        } else {
+            to_exec = argsv[2].to_owned();
+        }
+        verbose_info_print(format!("Executing {}", to_exec).to_string(), global_opts);
+        //println!("{}", to_exec);
+        //println!("{:?}", ext_args);
+        let status = Command::new(to_exec.clone()).args(ext_args).status();
+        match status {
+            Ok(_val) => {
+                //println!("OK: {}", val);
+            }
+            Err(..) => {
+                BADCOMMANDERROR.show_error(&to_exec, global_opts);
+            }
         }
     }
-}
 }
