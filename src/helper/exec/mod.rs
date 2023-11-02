@@ -162,7 +162,7 @@ pub fn load_exec(
         Ok(mut config) => {
             let hashname = calculate_hash(&config.PROJECT.NAME);
             //println!("{}", hash_string(&config.project.name));
-            if !config.PROJECT.IS_LOADED && (global_opts[2] == false) {
+            if !config.PROJECT.IS_LOADED && !global_opts[2] {
                 let _ = list(argsv.clone(), 1, global_opts);
                 if global_opts[2] {
                     infoprint!("This action will download the above, and run any tasks included.");
