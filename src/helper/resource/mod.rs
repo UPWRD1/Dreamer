@@ -5,7 +5,7 @@ extern crate colored;
 use crate::helper::colored::Colorize;
 
 // Local Imports
-use super::refs::{ADDCMD, EXTCMD, HELPCMD, LISTCMD, LOADCMD, NEWCMD, RUNCMD};
+use super::refs::{ADDCMD, EXTCMD, HELPCMD, LISTCMD, STARTCMD, NEWCMD, RUNCMD};
 use crate::helper::{errors::Printerror, Cmd, PathBuf, NOFILESERROR};
 
 // std imports
@@ -99,13 +99,24 @@ macro_rules! questionprint {
         input!("    {0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
     }};
 }
+
+/// Wrapper for input!()
+macro_rules! questionprintnof {
+    () => {
+        input!()
+    };
+    ($($arg:tt)*) => {{
+        input!("    {0}{1} ", "=", format_args!($($arg)*))
+    }};
+}
+
 /// Macro for printing the shell
 macro_rules! shellprint {
     () => {
         input!()
     };
     ($($arg:tt)*) => {{
-        print!("    {0} {1} ", "[>]".yellow().bold(), format_args!($($arg)*))
+        print!("{0} {1} ", "[>]".yellow().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -196,7 +207,7 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
         println!("\t  {0}: {1}", i + 1, el);
         //count += 1;
     }
-    let result: String = questionprint!("==> ");
+    let result: String = questionprintnof!("==> ");
     let result_c: Vec<char> = result.chars().collect();
     //println!("{}", result_c.len());
     if result_c.len() == 1 {
@@ -292,7 +303,7 @@ pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
         "help" => Ok(HELPCMD),
         "run" => Ok(RUNCMD),
         "new" => Ok(NEWCMD),
-        "load" => Ok(LOADCMD),
+        "start" => Ok(STARTCMD),
         "list" => Ok(LISTCMD),
         "add" => Ok(ADDCMD),
         "ext" => Ok(EXTCMD),
@@ -502,8 +513,20 @@ pub fn force_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool
     }
 }
 
+
+
+pub fn clean_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
+    if argsv.contains(&"-c".to_string()) {
+        global_opts.insert(2, true);
+        global_opts.to_vec()
+    } else {
+        global_opts.to_vec()
+    }
+}
+
+
 pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    let dream_flags: Vec<&str> = vec!["-v", "-f"];
+    let dream_flags: Vec<&str> = vec!["-v", "-f", "-c"];
     for i in dream_flags {
         if argsv.contains(&i.to_owned().to_string()) {
             match i {
@@ -513,6 +536,10 @@ pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
 
                 "-f" => {
                     force_set_true(argsv, global_opts);
+                }
+
+                "-c" => {
+                    clean_set_true(argsv, global_opts);
                 }
 
                 &_ => {}

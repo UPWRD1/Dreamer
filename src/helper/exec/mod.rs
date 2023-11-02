@@ -8,7 +8,7 @@ use crate::{
         resource::{calculate_hash, continue_prompt, input_fmt, read_file_gpath},
         usage_and_quit, verbose_check, verbose_info_print, Tool, ZzzConfig,
     },
-    list, LOADCMD,
+    list, STARTCMD,
 };
 
 use crate::helper::errors::*;
@@ -42,13 +42,19 @@ pub fn list_exec(
 
         Ok(config) => match way {
             1 => {
-                infoprint!("'{}' requires the following dependancies:", filepath);
-                let mut num = 1;
-                for tool in config.DEPENDANCIES.TOOLS {
-                    println!("\t{0}: {1} \t (from {2})", num, tool.name, tool.link);
-                    num += 1;
+                if config.DEPENDANCIES.TOOLS.is_empty() {
+                    warnprint!("Dream: '{}' has no dependancies!", filepath);
+                    Ok(())
+                } else {
+                    infoprint!("'{}' requires the following dependancies:", filepath);
+                    let mut num = 1;
+                    for tool in config.DEPENDANCIES.TOOLS {
+                        println!("\t{0}: {1} \t (from {2})", num, tool.name, tool.link);
+                        num += 1;
+                    }
+                    Ok(())
                 }
-                Ok(())
+
             }
 
             _ => {
@@ -80,7 +86,6 @@ pub fn add_exec(
                 link,
             };
             let mut tool_to_add: Vec<Tool> = vec![n_tool];
-            //let to_w = conf_f.deps.tools.append(&mut tool_to_add);
             conf_f.DEPENDANCIES.TOOLS.append(&mut tool_to_add);
             conf_f.PROJECT.IS_LOADED = false;
             let f = std::fs::OpenOptions::new()
@@ -123,6 +128,7 @@ pub fn remove_exec(
             let f = std::fs::OpenOptions::new()
                 .write(true)
                 .create(true)
+                .truncate(true)
                 .open(v_file.1)
                 .expect("Couldn't open file");
             serde_yaml::to_writer(f, &conf_f).unwrap();
@@ -156,7 +162,7 @@ pub fn load_exec(
         Ok(mut config) => {
             let hashname = calculate_hash(&config.PROJECT.NAME);
             //println!("{}", hash_string(&config.project.name));
-            if !config.PROJECT.IS_LOADED {
+            if !config.PROJECT.IS_LOADED && (global_opts[2] == false) {
                 let _ = list(argsv.clone(), 1, global_opts);
                 if global_opts[2] {
                     infoprint!("This action will download the above, and run any tasks included.");
@@ -187,10 +193,10 @@ pub fn load_deps(
     global_opts: &[bool],
 ) -> Result<(Vec<String>, u64), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
-        usage_and_quit(LOADCMD.name, "Missing Filename!");
+        usage_and_quit(STARTCMD.name, "Missing Filename!");
         return Err("Bad File".into());
     } else {
-        let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2, LOADCMD) {
+        let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2, STARTCMD) {
             Ok(v_file) => {
                 let result = load_exec(
                     v_file.0,
@@ -373,30 +379,31 @@ DEPENDANCIES:
 }
 
 pub fn extension_exec(
-    argsv: Vec<String>,
+    argsv: &Vec<String>,
     home_dir: Result<String, env::VarError>,
     global_opts: &[bool],
-) {
+) -> Result<(), String> {
     let mut to_exec: String;
     let argslen = &argsv.len();
     let ext_args: Vec<String>;
-    if argslen < &2 {
+    if argslen < &1 {
         quit(4);
+        Err("Not enough args".into())
     } else {
         match argslen {
-            &2 => {
+            &1 => {
                 ext_args = vec![];
             }
             _ => {
-                ext_args = argsv.clone().drain(3..*argslen).collect();
+                ext_args = argsv.clone().drain(2..*argslen).collect();
             }
         }
         if cfg!(windows) {
-            to_exec = format!("{}/.snooze/ext/{}.exe", home_dir.unwrap(), &argsv[2]).to_owned();
+            to_exec = format!("{}/.snooze/ext/{}.exe", home_dir.unwrap(), &argsv[1]).to_owned();
             let f_fexec = str::replace(&to_exec, "\\", "/").to_owned();
             to_exec = f_fexec.to_owned();
         } else {
-            to_exec = argsv[2].to_owned();
+            to_exec = argsv[1].to_owned();
         }
         verbose_info_print(format!("Executing {}", to_exec).to_string(), global_opts);
         //println!("{}", to_exec);
@@ -404,10 +411,11 @@ pub fn extension_exec(
         let status = Command::new(to_exec.clone()).args(ext_args).status();
         match status {
             Ok(_val) => {
-                //println!("OK: {}", val);
+                Ok(())
             }
             Err(..) => {
-                BADCOMMANDERROR.show_error(&to_exec, global_opts);
+                INVALIDEXTERROR.show_error(&to_exec, global_opts);
+                Err("Bad command exec".into())
             }
         }
     }

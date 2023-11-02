@@ -1,13 +1,13 @@
-PROJECT: {
-  NAME: "dream",
-  DESCRIPTION: "",
-  VERSION: "0.0.0",
-  IS_LOADED: false,
-}
-
+PROJECT:
+  NAME: dream
+  DESCRIPTION: ''
+  VERSION: 0.0.0
+  IS_LOADED: true
 ON:
   RUN:
-    - echo hello world
-
+  - echo hello world
 DEPENDANCIES:
   TOOLS:
+  - name: aw
+    link: af
+

@@ -37,12 +37,12 @@ pub const NEWCMD: Cmd = Cmd {
     aliases: ["new", "n"],
 };
 
-pub const LOADCMD: Cmd = Cmd {
-    name: "load",
-    desc: "Load a .zzz.yaml file",
-    longdesc: "Loads and grabs the dependancies found in a dreamfile. If no filename is provided, zzz will prompt for one.",
-    usage: "load [filename]",
-    aliases: ["load", "l"],
+pub const STARTCMD: Cmd = Cmd {
+    name: "start",
+    desc: "Starts dreaming a .zzz.yaml file",
+    longdesc: "Starts and grabs the dependancies found in a dreamfile. If no filename is provided, zzz will prompt for one.",
+    usage: "start [filename]",
+    aliases: ["start", "s"],
 };
 
 pub const LISTCMD: Cmd = Cmd {
@@ -78,5 +78,5 @@ pub const REMOVECMD: Cmd = Cmd {
 };
 
 pub const AVAILABLE_CMDS: [&Cmd; 8] = [
-    &HELPCMD, &LOADCMD, &RUNCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD, &REMOVECMD,
+    &HELPCMD, &STARTCMD, &RUNCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD, &REMOVECMD,
 ];

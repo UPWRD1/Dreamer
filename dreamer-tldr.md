@@ -1,11 +1,11 @@
 # Dreamer
 
 > Instant local dev environment creator, tool manager, and shell.
-> More information: <https://url-to-upstream.tld>.
+> More information: <https://github.com/UPWRD1/Dreamer>.
 
 - Load, execute, and enter a dream:
 
-`zzz load {{path/to/file.zzz.yaml}}`
+`zzz start {{path/to/file.zzz.yaml}}`
 
 
 - List all the dependancies for a dream:

@@ -31,9 +31,7 @@ use std::env::{self};
 use std::error::Error;
 use std::path::Path;
 use std::path::PathBuf;
-
-use std::thread;
-
+use std::str::FromStr;
 use self::refs::AVAILABLE_CMDS;
 use self::shell::init_shell;
 
@@ -72,6 +70,37 @@ pub struct ZzzConfig {
     PROJECT: ProjectConfig,
     ON: RunConfig,
     DEPENDANCIES: DepsConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum PromptItemKind {
+    HOMEDIR,
+    USRNAME,
+    CURRDIR,
+}
+
+impl FromStr for PromptItemKind {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<PromptItemKind, Self::Err> {
+        match input {
+            "HOMEDIR"  => Ok(PromptItemKind::HOMEDIR),
+            "CURRDIR"  => Ok(PromptItemKind::CURRDIR),
+            "USRNAME"  => Ok(PromptItemKind::USRNAME),
+            _      => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserConfigUser {
+    name: String,
+    prompt: Vec<String>
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserConfig {
+    user: UserConfigUser
 }
 
 pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
@@ -149,7 +178,7 @@ pub fn new(
     }
 }
 
-pub fn load(
+pub fn start(
     argsv: Vec<String>,
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
@@ -172,7 +201,7 @@ pub fn load(
     }
 }
 
-pub fn load_and_run(
+pub fn start_and_run(
     argsv: Vec<String>,
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
@@ -194,10 +223,7 @@ pub fn load_and_run(
                 Err("Error Running".into())
             }
             Ok(..) => {
-                thread::spawn(move || {
-                    init_shell(result.0, home_dir, result.1);
-                });
-
+                init_shell(result.0, home_dir, result.1);
                 Ok(())
             }
         },
@@ -260,8 +286,8 @@ pub fn add(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
     }
 }
 
-pub fn extension(args: Vec<String>, home_dir: Result<String, env::VarError>, global_opts: &[bool]) {
-    if check_arg_len(args.clone(), 2) {
+pub fn extension(args: &Vec<String>, home_dir: Result<String, env::VarError>, global_opts: &[bool]) -> Result<(), String>{
+    if check_arg_len(args.clone(), 1) {
         usage_and_quit(EXTCMD.name, "No Extension!")
     }
     extension_exec(args, home_dir, global_opts)
@@ -366,14 +392,14 @@ fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, Strin
             }
         }
         _ => {
-            for i in 0..m {
+            for _i in 0..m {
                 let mut j = 0;
                 //println!("{}", i + j);
                 //println!("{:?}", s);
-                while j < n && s[i + j] == t[j] {
-                    j += 1;
-                    break;
-                }
+                //while j < n && s[i + j] == t[j] {
+                j += 1;
+                    //break;
+                //}
                 if j == n {
                     if n == m {
                         println!("{:?} = {:?}", s, t);

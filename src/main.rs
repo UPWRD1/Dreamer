@@ -6,8 +6,8 @@ extern crate serde_yaml;
 // Local imports
 pub mod helper;
 use helper::{
-    add, extension, help, invalid_args_notify, list, load, new,
-    refs::{ADDCMD, HELPCMD, LISTCMD, LOADCMD, NEWCMD, RUNCMD},
+    add, extension, help, invalid_args_notify, list, start, new,
+    refs::{ADDCMD, HELPCMD, LISTCMD, STARTCMD, NEWCMD, RUNCMD},
     resource::argparse,
     run,
 };
@@ -17,7 +17,7 @@ use std::env::{self};
 use std::iter::*;
 
 use crate::helper::{
-    refs::{EXTCMD, REMOVECMD},
+    refs::REMOVECMD,
     remove,
     resource::scan_flags,
 };
@@ -44,9 +44,11 @@ pub fn cli() {
     global options:
     0: verbose
     1: force
-    2: dumb (no color)
+    2: clean
+    3: dumb (no color)
      */
     scan_flags(&args, &mut global_options);
+    //let env_args: &Vec<bool> = &global_options;
     if args.clone().len() == 1 {
         help(args);
     } else {
@@ -60,8 +62,8 @@ pub fn cli() {
             _ if argparse(&args, 1, HELPCMD) => {
                 help(args);
             }
-            _ if argparse(&args, 1, LOADCMD) => {
-                let _ = load(args, ENV_COMMANDS, home_dir, &global_options);
+            _ if argparse(&args, 1, STARTCMD) => {
+                let _ = start(args, ENV_COMMANDS, home_dir, &global_options);
             }
             _ if argparse(&args, 1, LISTCMD) => {
                 let _ = list(args, 0, &global_options);
@@ -69,15 +71,16 @@ pub fn cli() {
             _ if argparse(&args, 1, ADDCMD) => {
                 let _ = add(args, &global_options);
             }
-            _ if argparse(&args, 1, EXTCMD) => {
-                extension(args, home_dir, &global_options);
-            }
-
             _ if argparse(&args, 1, REMOVECMD) => {
                 remove(args, &global_options);
             }
 
-            _ => invalid_args_notify(args), // Create new plufile
+            _ => match extension(&args, home_dir, &global_options) {
+                Ok(..) => {},
+                Err(..) => {
+                    invalid_args_notify(args)
+                }
+            }, // Create new plufile
         }
     }
 }

@@ -10,6 +10,7 @@ enum ZzzErrorType {
     Mferr,
     Nferr,
     Bcerr,
+    Ixerr,
 }
 pub struct ZzzError<'a> {
     exit_code: usize,
@@ -42,6 +43,12 @@ pub const BADCOMMANDERROR: ZzzError = ZzzError {
     kind: Bcerr,
 };
 
+pub const INVALIDEXTERROR: ZzzError = ZzzError {
+    exit_code: 6,
+    message: "Invalid Extension:",
+    kind: ZzzErrorType::Ixerr,
+};
+
 impl Printerror for ZzzError<'_> {
     fn show_error(&self, filename: &str, global_opts: &[bool]) {
         match self.kind {
@@ -66,6 +73,9 @@ impl Printerror for ZzzError<'_> {
             Bcerr => {
                 errprint!("Command failed!");
                 continue_prompt(global_opts);
+            }
+            ZzzErrorType::Ixerr => {
+                errprint!("No such extension found!");
             }
         }
     }

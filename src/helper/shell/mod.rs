@@ -1,15 +1,68 @@
 /// Primary Logic for the Shell Interceptor
-use super::{clear_term, colored::Colorize, resource::quit, SELF_VERSION};
+use super::{clear_term, colored::Colorize, resource::{quit, read_file_gpath}, SELF_VERSION, UserConfig, PromptItemKind};
 
 use std::{
     env::{self},
-    io::{stdin, stdout, Write},
+    fs::File,
+    str::FromStr,
+    io::{stdin, stdout, Write, BufReader},
     path::Path,
-    //str::SplitWhitespace,
     process::Child,
     process::{Command, Stdio},
 };
 
+fn zzzsh_update_prompt(home_dir: &Result<String, env::VarError>) -> String {
+    let mut future_prompt: Vec<String> = vec![];
+    let config_path = format!("{}\\.snooze\\profiles\\s614627\\cfg", home_dir.as_ref().unwrap());
+    match read_file_gpath(&config_path) {
+        Ok(v_file) => {
+            let reader: BufReader<File> = BufReader::new(v_file.0);
+            let config: Result<UserConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
+            match config {
+                Err(e) => {
+                    println!("{e}");
+                    quit(1);
+                }
+
+                Ok(config) => {
+                    let x = config.user.prompt;
+                    for i in x {
+                        let mut ivchars: Vec<char> = i.chars().into_iter().collect();
+                        if (ivchars[0] == '%') && (ivchars[ivchars.len() - 1] == '%') {
+                            ivchars.remove(0);
+                            ivchars.remove(ivchars.len() - 1);
+                            
+                            let sivchars: String = ivchars.into_iter().collect();
+                            let sivcharsenum = PromptItemKind::from_str(&sivchars).expect("er");
+                            match sivcharsenum {
+                                PromptItemKind::HOMEDIR => {
+                                    future_prompt.push(home_dir.as_ref().unwrap().to_string())
+                                },
+                                PromptItemKind::CURRDIR => {
+                                    let parent = env::current_dir().unwrap().as_path().parent().unwrap().to_str().unwrap().to_string();
+                                    let name = env::current_dir().unwrap().as_os_str().to_str().unwrap().to_string();
+                                    let mut fname = name.replace(&parent, "");
+                                    fname.remove(0);
+                                    future_prompt.push(fname);
+                                },
+                                PromptItemKind::USRNAME => {
+                                    future_prompt.push(env::var("USERNAME").unwrap())
+                                },
+                            }
+                        } else {
+                            future_prompt.push(i);
+                        }
+                    }
+                }
+
+            }
+        },
+        Err(..) => {
+        },
+    };
+    //println!("{}", future_prompt.join(" "));
+    future_prompt.join("")
+}
 
 fn zzzsh_check_is_local(cmd: &str, env_cmds: &[String]) -> bool {
     env_cmds.contains(&cmd.to_string())
@@ -17,8 +70,8 @@ fn zzzsh_check_is_local(cmd: &str, env_cmds: &[String]) -> bool {
 
 fn zzsh_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, hashname: u64) {
     loop {
-        let curr_dir = env::current_dir();
-        shellprint!("(~{}) [zzz] @> ", curr_dir.unwrap().to_string_lossy());
+        let u_prompt: String = zzzsh_update_prompt(&home_dir);
+        shellprint!("{}", u_prompt);
         stdout().flush().unwrap();
 
         let mut input = String::new();
@@ -121,8 +174,6 @@ fn zzsh_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, has
 }
 pub fn init_shell(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, hashname: u64) {
     infoprint!("Counting Sheep...");
-    //pause();
-    //clear_term();
     infoprint!("Dreamer {0} (type 'exit()' to exit)", SELF_VERSION);
     zzsh_loop(env_cmds, home_dir, hashname);
 }
