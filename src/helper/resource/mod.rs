@@ -5,13 +5,14 @@ extern crate colored;
 use crate::helper::colored::Colorize;
 
 // Local Imports
-use super::refs::{ADDCMD, EXTCMD, HELPCMD, LISTCMD, STARTCMD, NEWCMD, RUNCMD};
+use super::refs::{ADDCMD, EXTCMD, HELPCMD, LISTCMD, STARTCMD, NEWCMD, RUNCMD, AVAILABLE_CMDS};
 use crate::helper::{errors::Printerror, Cmd, PathBuf, NOFILESERROR};
 
 // std imports
 use std::{
     collections::hash_map::DefaultHasher,
-    env,
+    env::{self, VarError},
+    fs,
     error::Error,
     fmt::Arguments,
     fs::File,
@@ -287,11 +288,27 @@ fn printextrahelp(cmd: Cmd) {
     long_infoprint(cmd.longdesc);
 }
 
-pub fn extrahelp(cmd: &str) {
+pub fn extrahelp(cmd: &str, homedir: Result<String, VarError>) {
+    if cmd == "all" {
+        infoprint!("Available Commands:");
+        for x in AVAILABLE_CMDS {
+            print!("\t - ");
+            printhelp(x);
+        }
+        println!("");
+        infoprint!("Available Extensions:");
+        let fhdir = format!("{}/.snooze/ext/", homedir.unwrap());
+        let paths = fs::read_dir(fhdir).unwrap();
+
+        for path in paths {
+            println!("\t - {}", path.unwrap().file_name().to_str().unwrap())
+        }
+    } else {
     match matchcmd(cmd) {
         Ok(cmd) => printextrahelp(cmd),
         Err(..) => usage_and_quit(HELPCMD.name, "Invalid Command Name"),
     }
+}
 }
 
 pub fn check_arg_len(argsv: Vec<String>, lentocheck: usize) -> bool {

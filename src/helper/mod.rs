@@ -29,10 +29,11 @@ use wizards::*;
 // std imports
 use std::env::{self};
 use std::error::Error;
+use std::fmt::Debug;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
-use self::refs::AVAILABLE_CMDS;
+use self::refs::COMMON_CMDS;
 use self::shell::init_shell;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
@@ -47,9 +48,17 @@ pub struct ProjectConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub enum ToolInstallMethod {
+    LINKZIP,
+    GIT,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct Tool {
-    name: String,
-    link: String,
+    NAME: String,
+    LINK: String,
+    METHOD: ToolInstallMethod
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -118,15 +127,15 @@ pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
     Ok(())
 }
 
-pub fn help(argsv: Vec<String>) {
+pub fn help(argsv: Vec<String>, home_dir: Result<String, env::VarError>) {
     if (argsv.len() == 2) || (argsv.len() == 1) {
         infoprint!(
             "Dreamer is a project dependancy grabber\n\tVersion: {}\n",
             SELF_VERSION
         );
         printusetemplate();
-        infoprint!("{}", "Commands:".bold());
-        for x in AVAILABLE_CMDS {
+        infoprint!("{}", "Common Commands:".bold());
+        for x in COMMON_CMDS {
             print!("\t - ");
             printhelp(x);
         }
@@ -135,8 +144,12 @@ pub fn help(argsv: Vec<String>) {
             "For more information on a command, run {}",
             "'zzz help <command>'".black()
         );
+        infoprint!(
+            "To see all available commands, run {}",
+            "'zzz help all'".black()
+        );
     } else {
-        extrahelp(argsv[2].as_str());
+        extrahelp(argsv[2].as_str(), home_dir);
     }
 }
 
@@ -183,6 +196,7 @@ pub fn start(
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
     global_opts: &[bool],
+
 ) -> Result<(), Box<dyn Error>> {
     match load_deps(
         argsv.to_owned(),
@@ -252,19 +266,20 @@ pub fn add(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
     if check_arg_len(argsv.clone(), 2) {
         match add_cmd_wizard() {
             Ok(vals) => {
-                let _ = add_exec(&vals.0, &vals.1, global_opts);
+                let _ = add_exec(&vals.0, &vals.1, vals.2, global_opts);
                 Ok(())
             }
 
             Err(err) => Err(err),
         }
     } else {
+        /* 
         let dep_to_get = &argsv[2];
         match argsv.len() {
             4 => {
                 let _ = match read_file_gpath(&argsv[3]) {
                     Ok(v_file) => {
-                        let result = add_exec(&v_file.1, dep_to_get, global_opts);
+                        let result = add_exec(&v_file.1, dep_to_get, , global_opts);
                         Ok(result)
                     }
                     Err(file) => {
@@ -281,6 +296,8 @@ pub fn add(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
                 usage_and_quit(ADDCMD.name, "Invalid arguments!");
             }
         }
+        */
+    
 
         Err("Bad File".into())
     }
@@ -332,39 +349,6 @@ pub fn invalid_args_notify(args: Vec<String>) {
 pub fn checkargs(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
     cmd.aliases.contains(&argsv[pos].as_str())
 }
-/*
-fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, String> {
-    let (m, n) = (s.len(), t.len());
-    //println!("{m}");
-    //println!("{n}");
-    for i in 0..m {
-        let mut j = 0;
-        println!("{}", i+j);
-        while j < n && s[i + j] == t[j] {
-            j += 1;
-        }
-        if j == n {
-            if n == m {
-                println!("{:?} = {:?}", s, t);
-            } else {
-                match way {
-                    0 => {
-                        tipprint!("Did you mean {}?", String::from_iter(t));
-                        return Ok("found".into())
-                },
-                    _ => {
-                        tipprint!("Did you mean {}?", String::from_iter(s));
-                        return Ok("found".into())
-                    },
-                }
-
-            }
-            return Err("notfound".into())
-        }
-    }
-    return Err("notfound".into())
-}
-*/
 
 fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, String> {
     let (m, n) = (s.len(), t.len());

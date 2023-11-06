@@ -50,7 +50,7 @@ pub fn cli() {
     scan_flags(&args, &mut global_options);
     //let env_args: &Vec<bool> = &global_options;
     if args.clone().len() == 1 {
-        help(args);
+        help(args, home_dir);
     } else {
         match args[1] {
             _ if argparse(&args, 1, NEWCMD) => {
@@ -60,7 +60,7 @@ pub fn cli() {
                 let _ = run(args, &global_options);
             }
             _ if argparse(&args, 1, HELPCMD) => {
-                help(args);
+                help(args, home_dir);
             }
             _ if argparse(&args, 1, STARTCMD) => {
                 let _ = start(args, ENV_COMMANDS, home_dir, &global_options);

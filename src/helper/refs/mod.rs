@@ -80,3 +80,7 @@ pub const REMOVECMD: Cmd = Cmd {
 pub const AVAILABLE_CMDS: [&Cmd; 8] = [
     &HELPCMD, &STARTCMD, &RUNCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD, &REMOVECMD,
 ];
+
+pub const COMMON_CMDS: [&Cmd; 5] = [
+    &HELPCMD, &NEWCMD, &STARTCMD, &ADDCMD, &REMOVECMD,
+];
