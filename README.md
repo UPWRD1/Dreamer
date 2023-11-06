@@ -22,14 +22,14 @@ $ zzz add myTool
         2: myTool 5.4.0 
         3: myTool 1.0.0 
     ==> 1
-    [i] Installing tool 'myTool' (6.3.2)...
+    [i] Adding tool 'myTool' (6.3.2)...
 ```
 
 * New computer? No problem:
 ```console
 $ git clone myProject
 
-$ zzz dream
+$ zzz start
     [?] 'myProject' requires the following tools:
         - myTool
         - otherTool
