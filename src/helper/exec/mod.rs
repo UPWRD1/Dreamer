@@ -162,7 +162,7 @@ pub fn load_exec(
         Ok(mut config) => {
             let hashname = calculate_hash(&config.PROJECT.NAME);
             //println!("{}", hash_string(&config.project.name));
-            if !config.PROJECT.IS_LOADED && !global_opts[2] {
+            if !config.PROJECT.IS_LOADED || global_opts[2] {
                 let _ = list(argsv.clone(), 1, global_opts);
                 if global_opts[2] {
                     infoprint!("This action will download the above, and run any tasks included.");
@@ -330,7 +330,7 @@ fn tool_install(
                 match fs::create_dir_all(&dir_loc) {
                     Ok(..) => {
                         let curr_dir = env::current_dir().unwrap();
-                        let namef = format!("{0}{1}", dir_loc, tool.NAME);
+                        let _namef = format!("{0}{1}", dir_loc, tool.NAME);
                         let args: Vec<&str> =
                             vec!["/C", "git", "clone", &link_str, &dir_temp, "-q"];
                         verbose_info_print("Cloning repo...".to_string(), global_opts);
@@ -339,14 +339,60 @@ fn tool_install(
                             match env::set_current_dir(&dir_temp) {
                                 Ok(()) => {
                                     println!("Made it to {}", &dir_temp);
-                                    let args: Vec<&str> = vec!["/C", "zzz", "run", "dream"];
-                                    verbose_info_print("Building...".to_string(), global_opts);
-                                    let status = Command::new("cmd").args(args).status()?;
-                                    if status.success() {
-                                        Ok(())
-                                    } else {
-                                        Err("asdf".into())
-                                    }
+                                    let argsv: Vec<String> =
+                                        vec!["".to_string(), "".to_string(), "dream".to_string()];
+                                    let _: Result<(), Box<dyn Error>> =
+                                        match read_file(&argsv, 2, STARTCMD) {
+                                            Ok(v_file) => {
+                                                let reader: BufReader<File> =
+                                                    BufReader::new(v_file.0);
+
+                                                let nconfig: Result<ZzzConfig, serde_yaml::Error> =
+                                                    serde_yaml::from_reader(reader);
+
+                                                let args: Vec<&str> =
+                                                    vec!["/C", "zzz", "run", "dream"];
+                                                verbose_info_print(
+                                                    "Building...".to_string(),
+                                                    global_opts,
+                                                );
+                                                let status =
+                                                    Command::new("cmd").args(args).status()?;
+                                                if status.success() {
+                                                    let package = &nconfig.unwrap().PROJECT.PACKAGE;
+                                                    let install_loc = format!(
+                                                        "{}/.snooze/bins/{}/",
+                                                        home_dir.as_ref().unwrap(),
+                                                        hashname
+                                                    );
+                                                    let args: Vec<&str> =
+                                                        vec!["/C", "cp", package, &install_loc];
+                                                    verbose_info_print(
+                                                        "Building...".to_string(),
+                                                        global_opts,
+                                                    );
+                                                    let ctemp = env::current_dir().unwrap();
+                                                    let status =
+                                                        Command::new("cmd").args(args).status()?;
+                                                    if status.success() {
+                                                        env::set_current_dir(curr_dir)?;
+                                                        fs::remove_dir_all(ctemp)?;
+                                                        Ok(())
+                                                    } else {
+                                                        quit(4);
+                                                        Err("asdf".into())
+                                                    }
+                                                } else {
+                                                    quit(4);
+                                                    Err("asdf".into())
+                                                }
+                                            }
+                                            Err(file) => {
+                                                MISSINGFILEERROR.show_error(&file.1, global_opts);
+                                                Err("Missing File".into())
+                                            }
+                                        };
+                                    Ok(())
                                 }
                                 Err(..) => {
                                     quit(4);
@@ -433,17 +479,17 @@ pub fn run_exec(
                 let status = Command::new(program).args(args).status()?;
                 if status.success() {
                     if verbose_check(&global_opts) {
-                        infoprint!("Command '{}' executed successfully", command);
+                        verbose_info_print("ok".to_string(), &global_opts);
                     }
                     okcount += 1;
                 } else {
                     errprint!("Error executing command: '{}'", command);
+                    continue_prompt(&global_opts);
                 }
             }
             if cmdcount == okcount {
                 println!();
                 successprint!("All tasks completed successfully");
-                println!();
             }
             Ok(())
         }

@@ -45,6 +45,14 @@ pub const STARTCMD: Cmd = Cmd {
     aliases: ["start", "s"],
 };
 
+pub const GRABCMD: Cmd = Cmd {
+    name: "grab",
+    desc: "Grabs the dependancies of a dreamfile",
+    longdesc: "Grabs the dependancies found in a dreamfile. If no filename is provided, zzz will prompt for one.",
+    usage: "grab [filename]",
+    aliases: ["grab", "g"],
+};
+
 pub const LISTCMD: Cmd = Cmd {
     name: "list",
     desc: "Lists all dependancies in a dreamfile",
@@ -77,8 +85,8 @@ pub const REMOVECMD: Cmd = Cmd {
     aliases: ["remove", "rm"],
 };
 
-pub const AVAILABLE_CMDS: [&Cmd; 8] = [
-    &HELPCMD, &STARTCMD, &RUNCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD, &REMOVECMD,
+pub const AVAILABLE_CMDS: [&Cmd; 9] = [
+    &HELPCMD, &STARTCMD, &RUNCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD, &REMOVECMD, &GRABCMD
 ];
 
 pub const COMMON_CMDS: [&Cmd; 5] = [

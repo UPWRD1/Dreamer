@@ -2,15 +2,16 @@ PROJECT:
   NAME: dream
   DESCRIPTION: ''
   VERSION: 0.0.0
-  IS_LOADED: false
+  IS_LOADED: true
 ON:
   RUN:
   - echo hello world
 DEPENDANCIES:
   TOOLS:
-  - name: motion
-    link: https://github.com/MotionLang/motion.git
-    method: GIT
+  - NAME: motion
+    LINK: https://github.com/MotionLang/motion.git
+    METHOD: GIT
+
 
 
 

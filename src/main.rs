@@ -17,9 +17,9 @@ use std::env::{self};
 use std::iter::*;
 
 use crate::helper::{
-    refs::REMOVECMD,
+    refs::{REMOVECMD, GRABCMD},
     remove,
-    resource::scan_flags,
+    resource::scan_flags, grab,
 };
 /*
 Error codes:
@@ -73,6 +73,9 @@ pub fn cli() {
             }
             _ if argparse(&args, 1, REMOVECMD) => {
                 remove(args, &global_options);
+            }
+            _ if argparse(&args, 1, GRABCMD) => {
+                let _ = grab(args, ENV_COMMANDS, home_dir, &global_options);
             }
 
             _ => match extension(&args, home_dir, &global_options) {

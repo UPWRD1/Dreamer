@@ -21,13 +21,13 @@ pub struct ZzzError<'a> {
 
 pub const INVALIDFILEERR: ZzzError = ZzzError {
     exit_code: 3,
-    message: "Cannot find file",
+    message: "Invalid config file ",
     kind: Iferr,
 };
 
 pub const MISSINGFILEERROR: ZzzError = ZzzError {
     exit_code: 2,
-    message: "Invalid config file",
+    message: "Cannot find file ",
     kind: Mferr,
 };
 
@@ -39,13 +39,13 @@ pub const NOFILESERROR: ZzzError = ZzzError {
 
 pub const BADCOMMANDERROR: ZzzError = ZzzError {
     exit_code: 6,
-    message: "Failed Command:",
+    message: "Failed Command: ",
     kind: Bcerr,
 };
 
 pub const INVALIDEXTERROR: ZzzError = ZzzError {
     exit_code: 6,
-    message: "Invalid Extension:",
+    message: "Invalid Extension: ",
     kind: ZzzErrorType::Ixerr,
 };
 

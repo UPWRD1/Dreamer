@@ -27,14 +27,14 @@ pub mod wizards;
 use wizards::*;
 
 // std imports
+use self::refs::COMMON_CMDS;
+use self::shell::init_shell;
 use std::env::{self};
 use std::error::Error;
 use std::fmt::Debug;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
-use self::refs::COMMON_CMDS;
-use self::shell::init_shell;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
@@ -42,6 +42,7 @@ pub const SELF_VERSION: &str = "2023 (0.1.0)";
 #[allow(non_snake_case)]
 pub struct ProjectConfig {
     NAME: String,
+    PACKAGE: String,
     DESCRIPTION: String,
     VERSION: String,
     IS_LOADED: bool,
@@ -58,7 +59,7 @@ pub enum ToolInstallMethod {
 pub struct Tool {
     NAME: String,
     LINK: String,
-    METHOD: ToolInstallMethod
+    METHOD: ToolInstallMethod,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -93,10 +94,10 @@ impl FromStr for PromptItemKind {
 
     fn from_str(input: &str) -> Result<PromptItemKind, Self::Err> {
         match input {
-            "HOMEDIR"  => Ok(PromptItemKind::HOMEDIR),
-            "CURRDIR"  => Ok(PromptItemKind::CURRDIR),
-            "USRNAME"  => Ok(PromptItemKind::USRNAME),
-            _      => Err(()),
+            "HOMEDIR" => Ok(PromptItemKind::HOMEDIR),
+            "CURRDIR" => Ok(PromptItemKind::CURRDIR),
+            "USRNAME" => Ok(PromptItemKind::USRNAME),
+            _ => Err(()),
         }
     }
 }
@@ -104,12 +105,12 @@ impl FromStr for PromptItemKind {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserConfigUser {
     name: String,
-    prompt: Vec<String>
+    prompt: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserConfig {
-    user: UserConfigUser
+    user: UserConfigUser,
 }
 
 pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
@@ -196,7 +197,6 @@ pub fn start(
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
     global_opts: &[bool],
-
 ) -> Result<(), Box<dyn Error>> {
     match load_deps(
         argsv.to_owned(),
@@ -212,6 +212,29 @@ pub fn start(
             init_shell(result.0.clone(), home_dir.clone(), result.1);
             Ok(())
         }
+    }
+}
+
+pub fn grab(
+    argsv: Vec<String>,
+    env_cmds: Vec<String>,
+    home_dir: Result<String, env::VarError>,
+    global_opts: &[bool],
+) -> Result<(), Box<dyn Error>> {
+    match load_deps(
+        argsv.to_owned(),
+        &env_cmds.to_vec(),
+        home_dir.clone(),
+        global_opts,
+    ) {
+        Err(_) => {
+            quit(3);
+            Err("Error Loading".into())
+        }
+        Ok(..) => match run(argsv, global_opts) {
+            Ok(..) => Ok(()),
+            Err(..) => Err("asdf".into()),
+        },
     }
 }
 
@@ -231,12 +254,13 @@ pub fn start_and_run(
             quit(2);
             Err("Error Loading".into())
         }
-        Ok(result) => match run(argsv, global_opts) {
+        Ok(result) => match run(argsv.clone(), global_opts) {
             Err(_) => {
                 quit(2);
                 Err("Error Running".into())
             }
             Ok(..) => {
+                dbg!(&argsv.clone());
                 init_shell(result.0, home_dir, result.1);
                 Ok(())
             }
@@ -273,7 +297,7 @@ pub fn add(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
             Err(err) => Err(err),
         }
     } else {
-        /* 
+        /*
         let dep_to_get = &argsv[2];
         match argsv.len() {
             4 => {
@@ -297,13 +321,16 @@ pub fn add(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
             }
         }
         */
-    
 
         Err("Bad File".into())
     }
 }
 
-pub fn extension(args: &Vec<String>, home_dir: Result<String, env::VarError>, global_opts: &[bool]) -> Result<(), String>{
+pub fn extension(
+    args: &Vec<String>,
+    home_dir: Result<String, env::VarError>,
+    global_opts: &[bool],
+) -> Result<(), String> {
     if check_arg_len(args.clone(), 1) {
         usage_and_quit(EXTCMD.name, "No Extension!")
     }
@@ -382,7 +409,7 @@ fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, Strin
                 //println!("{:?}", s);
                 //while j < n && s[i + j] == t[j] {
                 j += 1;
-                    //break;
+                //break;
                 //}
                 if j == n {
                     if n == m {

@@ -131,6 +131,16 @@ macro_rules! tipprint {
     }};
 }
 
+/// Print UI verbose messages to stdout
+macro_rules! vbprint {
+    () => {
+        input!()
+    };
+    ($($arg:tt)*) => {{
+        infoprint!("{}", format_args!($($arg)*))
+    }};
+}
+
 /// Throw a fatal internal error.
 pub fn throw_fatal(msg: &str) {
     errprint!(
@@ -342,7 +352,8 @@ pub fn read_file(
                 let filepath = argsv[to_open].to_string().to_owned() + ".zzz.yaml";
                 let file: Result<File, std::io::Error> = File::open(filepath.clone());
                 match file {
-                    Ok(v_file) => Ok((v_file, filepath)),
+                    Ok(v_file) => {
+                        Ok((v_file, filepath))},
                     Err(error) => Err((error.to_string(), filepath)),
                 }
             }
@@ -529,7 +540,6 @@ pub fn force_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool
         global_opts.to_vec()
     }
 }
-
 
 
 pub fn clean_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
