@@ -134,10 +134,12 @@ macro_rules! tipprint {
 /// Print UI verbose messages to stdout
 macro_rules! vbprint {
     () => {
-        input!()
+        println!();
     };
-    ($($arg:tt)*) => {{
-        infoprint!("{}", format_args!($($arg)*))
+    (&g_o:expr, $($arg:tt)*) => {{
+        if $g_o[0] {
+            infoprint!("{}", format_args!($($arg)*))
+        }
     }};
 }
 

@@ -478,9 +478,7 @@ pub fn run_exec(
                 let args: Vec<&str> = parts.collect();
                 let status = Command::new(program).args(args).status()?;
                 if status.success() {
-                    if verbose_check(&global_opts) {
-                        verbose_info_print("ok".to_string(), &global_opts);
-                    }
+                    vbprint!(&global_opts, "yay");
                     okcount += 1;
                 } else {
                     errprint!("Error executing command: '{}'", command);
@@ -489,7 +487,7 @@ pub fn run_exec(
             }
             if cmdcount == okcount {
                 println!();
-                successprint!("All tasks completed successfully");
+                vbprint!(&global_opts, "All tasks completed successfully");
             }
             Ok(())
         }
