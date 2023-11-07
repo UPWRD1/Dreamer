@@ -6,7 +6,7 @@ use crate::{
         colored::Colorize,
         read_file,
         resource::{calculate_hash, continue_prompt, input_fmt, read_file_gpath, verbose_check},
-        run, usage_and_quit, verbose_info_print, Tool, ToolInstallMethod, ZzzConfig,
+        run, usage_and_quit, Tool, ToolInstallMethod, ZzzConfig,
     },
     list, STARTCMD,
 };
@@ -168,7 +168,11 @@ pub fn load_exec(
                     infoprint!("This action will download the above, and run any tasks included.");
                 }
                 continue_prompt(global_opts);
-                verbose!(global_opts, "Getting dependancies from file: '{}'", filepath);
+                verbose!(
+                    global_opts,
+                    "Getting dependancies from file: '{}'",
+                    filepath
+                );
                 /*
                 if verbose_check(global_opts) {
                     infoprint!("Getting dependancies from file: '{}'", filepath);
@@ -232,270 +236,290 @@ fn tool_install(
     global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     env_cmds.push(tool.NAME.clone());
-    verbose!(&global_opts, "Installing {0} from {1}", tool.NAME, tool.LINK);
+    verbose!(
+        &global_opts,
+        "Installing {0} from {1}",
+        tool.NAME,
+        tool.LINK
+    );
     let link = &tool.LINK;
     let method = &tool.METHOD;
     let link_str = link.to_string();
     match method {
         ToolInstallMethod::LINKZIP => {
             if cfg!(windows) {
-                let dir_loc = format!(
-                    "{0}\\.snooze\\bins\\{1}\\",
-                    home_dir.as_mut().unwrap(),
-                    hashname
-                );
-                match fs::create_dir_all(&dir_loc) {
-                    Ok(..) => {
-                        let namef = format!("{0}{1}", dir_loc, tool.NAME);
-                        let args: Vec<&str> =
-                            vec!["/C", "curl", &link_str, "--output", &namef, "--silent"];
-                        //println!("{:?}", args);
-
-                        let status = Command::new("cmd").args(args).status()?;
-                        if status.success() {
-                            let args2: Vec<&str> = vec!["/C", "chmod", "a+x", &namef];
-                            let status2 = Command::new("cmd").args(args2).status()?;
-                            if status2.success() {
-                                verbose_info_print(
-                                    format!("'{}' installed", tool.NAME),
-                                    global_opts,
-                                );
-                                Ok(())
-                            } else {
-                                errprint!("Error grabbing: '{}'", tool.NAME);
-                                continue_prompt(global_opts);
-                                Err("Error grabbing".into())
-                            }
-                            //infoprint!("Command '{}' executed successfully", command);
-                        } else {
-                            errprint!("Error grabbing: '{}'", tool.NAME);
-                            continue_prompt(global_opts);
-                            Err("Error grabbing".into())
-                        }
-                    }
-                    Err(..) => {
-                        errprint!("Error creating dir");
-                        Err("Error creating dir".into())
-                    }
-                }
+                windows_link_install(home_dir, hashname, tool, &link_str, global_opts)
             } else {
-                let dir_loc = format!(
-                    "{0}/.snooze/bins/{1}/",
-                    home_dir.as_mut().unwrap(),
-                    hashname
-                );
-                match fs::create_dir_all(&dir_loc) {
-                    Ok(..) => {
-                        let link_str_f = link_str.to_string();
-                        let namef = format!("{0}{1}", dir_loc, tool.NAME);
-                        let args: Vec<&str> =
-                            vec!["-c", "/usr/bin/curl", &link_str_f, "--output", &namef];
-                        let status = Command::new("bash").args(args).status()?;
-
-                        if status.success() {
-                            let args2: Vec<&str> = vec!["-c", "chmod", "a+x", &namef];
-                            let status2 = Command::new("bash").args(args2).status()?;
-                            if status2.success() {
-                                verbose_info_print(
-                                    format!("'{}' installed", tool.NAME),
-                                    global_opts,
-                                );
-                                Ok(())
-                            } else {
-                                errprint!("Error grabbing: '{}'", tool.NAME);
-                                Err("Error grabbing".into())
-                            }
-                        } else {
-                            errprint!("Error grabbing: '{}'", tool.NAME);
-                            Err("Error grabbing".into())
-                        }
-                    }
-                    Err(..) => {
-                        errprint!("Error creating dir");
-                        Err("Error creating dir".into())
-                    }
-                }
+                unix_link_install(home_dir, hashname, &link_str, tool, global_opts)
             }
         }
         &ToolInstallMethod::GIT => {
             if cfg!(windows) {
-                let dir_loc = format!(
-                    "{0}\\.snooze\\bins\\{1}\\",
-                    home_dir.as_mut().unwrap(),
-                    hashname
-                );
-                let dir_temp = format!(
-                    "{0}\\.snooze\\ztemp\\{1}\\",
-                    home_dir.as_mut().unwrap(),
-                    hashname
-                );
-                match fs::create_dir_all(&dir_loc) {
-                    Ok(..) => {
-                        let curr_dir = env::current_dir().unwrap();
-                        let _namef = format!("{0}{1}", dir_loc, tool.NAME);
-                        let args: Vec<&str> =
-                            vec!["/C", "git", "clone", &link_str, &dir_temp, "-q"];
-                        verbose!(&global_opts, "Cloning...");
-                        let status = Command::new("cmd").args(args).status()?;
-                        if status.success() {
-                            match env::set_current_dir(&dir_temp) {
-                                Ok(()) => {
-                                    //println!("Made it to {}", &dir_temp);
-                                    let argsv: Vec<String> =
-                                        vec!["".to_string(), "".to_string(), "dream".to_string()];
-                                    let _: Result<(), Box<dyn Error>> =
-                                        match read_file(&argsv, 2, STARTCMD) {
-                                            Ok(v_file) => {
-                                                let reader: BufReader<File> =
-                                                    BufReader::new(v_file.0);
+                windows_git_install(home_dir, hashname, tool, &link_str, global_opts)
+            } else {
+                unix_git_install(home_dir, hashname, tool, link_str, global_opts)
+            }
+        }
+    }
+}
 
-                                                let nconfig: Result<ZzzConfig, serde_yaml::Error> =
-                                                    serde_yaml::from_reader(reader);
+fn unix_link_install(
+    home_dir: &mut Result<String, env::VarError>,
+    hashname: u64,
+    link_str: &String,
+    tool: &Tool,
+    global_opts: &[bool],
+) -> Result<(), Box<dyn Error>> {
+    let dir_loc = format!(
+        "{0}/.snooze/bins/{1}/",
+        home_dir.as_mut().unwrap(),
+        hashname
+    );
+    match fs::create_dir_all(&dir_loc) {
+        Ok(..) => {
+            let link_str_f = link_str.to_string();
+            let namef = format!("{0}{1}", dir_loc, tool.NAME);
+            let args: Vec<&str> = vec!["-c", "/usr/bin/curl", &link_str_f, "--output", &namef];
+            let status = Command::new("bash").args(args).status()?;
 
-                                                let args: Vec<&str> =
-                                                    vec!["/C", "zzz", "run", "dream"];
-                                                let status =
-                                                    Command::new("cmd").args(args).status()?;
-                                                if status.success() {
-                                                    let package = &nconfig.unwrap().PROJECT.PACKAGE;
-                                                    let install_loc = format!(
-                                                        "{}/.snooze/bins/{}/",
-                                                        home_dir.as_ref().unwrap(),
-                                                        hashname
-                                                    );
-                                                    let args: Vec<&str> =
-                                                        vec!["/C", "cp", package, &install_loc];
-                                                    verbose_info_print(
-                                                        "Building...".to_string(),
-                                                        global_opts,
-                                                    );
-                                                    let ctemp = env::current_dir().unwrap();
-                                                    let status =
-                                                        Command::new("cmd").args(args).status()?;
-                                                    if status.success() {
-                                                        env::set_current_dir(curr_dir)?;
-                                                        fs::remove_dir_all(ctemp)?;
-                                                        Ok(())
-                                                    } else {
-                                                        quit(4);
-                                                        Err("asdf".into())
-                                                    }
-                                                } else {
-                                                    quit(4);
-                                                    Err("asdf".into())
-                                                }
-                                            }
-                                            Err(file) => {
-                                                MISSINGFILEERROR.show_error(&file.1, global_opts);
-                                                Err("Missing File".into())
-                                            }
-                                        };
-                                    Ok(())
-                                }
-                                Err(..) => {
+            if status.success() {
+                let args2: Vec<&str> = vec!["-c", "chmod", "a+x", &namef];
+                let status2 = Command::new("bash").args(args2).status()?;
+                if status2.success() {
+                    verbose!(global_opts, "'{}' installed", tool.NAME);
+                    Ok(())
+                } else {
+                    errprint!("Error grabbing: '{}'", tool.NAME);
+                    Err("Error grabbing".into())
+                }
+            } else {
+                errprint!("Error grabbing: '{}'", tool.NAME);
+                Err("Error grabbing".into())
+            }
+        }
+        Err(..) => {
+            errprint!("Error creating dir");
+            Err("Error creating dir".into())
+        }
+    }
+}
+
+fn windows_link_install(
+    home_dir: &mut Result<String, env::VarError>,
+    hashname: u64,
+    tool: &Tool,
+    link_str: &String,
+    global_opts: &[bool],
+) -> Result<(), Box<dyn Error>> {
+    let dir_loc = format!(
+        "{0}\\.snooze\\bins\\{1}\\",
+        home_dir.as_mut().unwrap(),
+        hashname
+    );
+    match fs::create_dir_all(&dir_loc) {
+        Ok(..) => {
+            let namef = format!("{0}{1}", dir_loc, tool.NAME);
+            let args: Vec<&str> = vec!["/C", "curl", &link_str, "--output", &namef, "--silent"];
+            //println!("{:?}", args);
+
+            let status = Command::new("cmd").args(args).status()?;
+            if status.success() {
+                let args2: Vec<&str> = vec!["/C", "chmod", "a+x", &namef];
+                let status2 = Command::new("cmd").args(args2).status()?;
+                if status2.success() {
+                    verbose!(global_opts, "'{}' installed", tool.NAME);
+                    Ok(())
+                } else {
+                    errprint!("Error grabbing: '{}'", tool.NAME);
+                    continue_prompt(global_opts);
+                    Err("Error grabbing".into())
+                }
+                //infoprint!("Command '{}' executed successfully", command);
+            } else {
+                errprint!("Error grabbing: '{}'", tool.NAME);
+                continue_prompt(global_opts);
+                Err("Error grabbing".into())
+            }
+        }
+        Err(..) => {
+            errprint!("Error creating dir");
+            Err("Error creating dir".into())
+        }
+    }
+}
+
+fn unix_git_install(
+    home_dir: &mut Result<String, env::VarError>,
+    hashname: u64,
+    tool: &Tool,
+    link_str: String,
+    global_opts: &[bool],
+) -> Result<(), Box<dyn Error>> {
+    let dir_loc = format!(
+        "{0}/.snooze/bins/{1}/",
+        home_dir.as_mut().unwrap(),
+        hashname
+    );
+    let dir_temp = format!(
+        "{0}/.snooze/ztemp/{1}/",
+        home_dir.as_mut().unwrap(),
+        hashname
+    );
+    match fs::create_dir_all(&dir_loc) {
+        Ok(..) => {
+            let curr_dir = env::current_dir().unwrap();
+            let _namef = format!("{0}{1}", dir_loc, tool.NAME);
+            let args: Vec<&str> = vec!["clone", &link_str, &dir_temp, "-q"];
+            verbose!(global_opts, "Cloning...");
+            let status = Command::new("git").args(args).status()?;
+            if status.success() {
+                match env::set_current_dir(&dir_temp) {
+                    Ok(()) => {
+                        //println!("Made it to {}", &dir_temp);
+                        let argsv: Vec<String> =
+                            vec!["".to_string(), "".to_string(), "dream".to_string()];
+                        let _: Result<(), Box<dyn Error>> = match read_file(&argsv, 2, STARTCMD) {
+                            Ok(v_file) => {
+                                let reader: BufReader<File> = BufReader::new(v_file.0);
+
+                                let nconfig: Result<ZzzConfig, serde_yaml::Error> =
+                                    serde_yaml::from_reader(reader);
+                                let synthargs: Vec<String> =
+                                    vec!["zzz".to_string(), "run".to_string(), "dream".to_string()];
+                                let _ = run(synthargs, &global_opts);
+                                if status.success() {
+                                    let package = &nconfig.unwrap().PROJECT.PACKAGE;
+                                    let install_loc = format!(
+                                        "{}/.snooze/bins/{}/",
+                                        home_dir.as_ref().unwrap(),
+                                        hashname
+                                    );
+                                    let args: Vec<&str> = vec![package, &install_loc];
+                                    let ctemp = env::current_dir().unwrap();
+                                    let status = Command::new("cp").args(args).status()?;
+                                    if status.success() {
+                                        //println!("removing {:?}", ctemp.clone());
+                                        env::set_current_dir(curr_dir)?;
+                                        fs::remove_dir_all(ctemp)?;
+                                        Ok(())
+                                    } else {
+                                        quit(4);
+                                        Err("asdf".into())
+                                    }
+                                } else {
                                     quit(4);
                                     Err("asdf".into())
                                 }
                             }
-                        } else {
-                            errprint!("Error grabbing: '{}'", tool.NAME);
-                            continue_prompt(global_opts);
-                            return Err("Error grabbing".into());
-                        }
+                            Err(file) => {
+                                MISSINGFILEERROR.show_error(&file.1, global_opts);
+                                Err("Missing File".into())
+                            }
+                        };
+                        Ok(())
                     }
                     Err(..) => {
-                        errprint!("Error creating dir");
-                        return Err("Error creating dir".into());
+                        quit(4);
+                        Err("asdf".into())
                     }
                 }
             } else {
-                let dir_loc = format!(
-                    "{0}/.snooze/bins/{1}/",
-                    home_dir.as_mut().unwrap(),
-                    hashname
-                );
-                let dir_temp = format!(
-                    "{0}/.snooze/ztemp/{1}/",
-                    home_dir.as_mut().unwrap(),
-                    hashname
-                );
-                match fs::create_dir_all(&dir_loc) {
-                    Ok(..) => {
-                        let curr_dir = env::current_dir().unwrap();
-                        let _namef = format!("{0}{1}", dir_loc, tool.NAME);
-                        let args: Vec<&str> = vec!["clone", &link_str, &dir_temp, "-q"];
-                        verbose_info_print("Cloning...".to_string(), global_opts);
-                        let status = Command::new("git").args(args).status()?;
-                        if status.success() {
-                            match env::set_current_dir(&dir_temp) {
-                                Ok(()) => {
-                                    //println!("Made it to {}", &dir_temp);
-                                    let argsv: Vec<String> =
-                                        vec!["".to_string(), "".to_string(), "dream".to_string()];
-                                    let _: Result<(), Box<dyn Error>> =
-                                        match read_file(&argsv, 2, STARTCMD) {
-                                            Ok(v_file) => {
-                                                let reader: BufReader<File> =
-                                                    BufReader::new(v_file.0);
+                errprint!("Error grabbing: '{}'", tool.NAME);
+                continue_prompt(global_opts);
+                return Err("Error grabbing".into());
+            }
+        }
+        Err(..) => {
+            errprint!("Error creating dir");
+            return Err("Error creating dir".into());
+        }
+    }
+}
 
-                                                let nconfig: Result<ZzzConfig, serde_yaml::Error> =
-                                                    serde_yaml::from_reader(reader);
-                                                let synthargs: Vec<String> = vec![
-                                                    "zzz".to_string(),
-                                                    "run".to_string(),
-                                                    "dream".to_string(),
-                                                ];
-                                                let _ = run(synthargs, &global_opts);
-                                                if status.success() {
-                                                    let package = &nconfig.unwrap().PROJECT.PACKAGE;
-                                                    let install_loc = format!(
-                                                        "{}/.snooze/bins/{}/",
-                                                        home_dir.as_ref().unwrap(),
-                                                        hashname
-                                                    );
-                                                    let args: Vec<&str> =
-                                                        vec![package, &install_loc];
-                                                    let ctemp = env::current_dir().unwrap();
-                                                    let status =
-                                                        Command::new("cp").args(args).status()?;
-                                                    if status.success() {
-                                                        //println!("removing {:?}", ctemp.clone());
-                                                        env::set_current_dir(curr_dir)?;
-                                                        fs::remove_dir_all(ctemp)?;
-                                                        Ok(())
-                                                    } else {
-                                                        quit(4);
-                                                        Err("asdf".into())
-                                                    }
-                                                } else {
-                                                    quit(4);
-                                                    Err("asdf".into())
-                                                }
-                                            }
-                                            Err(file) => {
-                                                MISSINGFILEERROR.show_error(&file.1, global_opts);
-                                                Err("Missing File".into())
-                                            }
-                                        };
-                                    Ok(())
-                                }
-                                Err(..) => {
+fn windows_git_install(
+    home_dir: &mut Result<String, env::VarError>,
+    hashname: u64,
+    tool: &Tool,
+    link_str: &String,
+    global_opts: &[bool],
+) -> Result<(), Box<dyn Error>> {
+    let dir_loc = format!(
+        "{0}\\.snooze\\bins\\{1}\\",
+        home_dir.as_mut().unwrap(),
+        hashname
+    );
+    let dir_temp = format!(
+        "{0}\\.snooze\\ztemp\\{1}\\",
+        home_dir.as_mut().unwrap(),
+        hashname
+    );
+    match fs::create_dir_all(&dir_loc) {
+        Ok(..) => {
+            let curr_dir = env::current_dir().unwrap();
+            let _namef = format!("{0}{1}", dir_loc, tool.NAME);
+            let args: Vec<&str> = vec!["/C", "git", "clone", &link_str, &dir_temp, "-q"];
+            verbose!(&global_opts, "Cloning...");
+            let status = Command::new("cmd").args(args).status()?;
+            if status.success() {
+                match env::set_current_dir(&dir_temp) {
+                    Ok(()) => {
+                        //println!("Made it to {}", &dir_temp);
+                        let argsv: Vec<String> =
+                            vec!["".to_string(), "".to_string(), "dream".to_string()];
+                        let _: Result<(), Box<dyn Error>> = match read_file(&argsv, 2, STARTCMD) {
+                            Ok(v_file) => {
+                                let reader: BufReader<File> = BufReader::new(v_file.0);
+
+                                let nconfig: Result<ZzzConfig, serde_yaml::Error> =
+                                    serde_yaml::from_reader(reader);
+
+                                let args: Vec<&str> = vec!["/C", "zzz", "run", "dream"];
+                                let status = Command::new("cmd").args(args).status()?;
+                                if status.success() {
+                                    let package = &nconfig.unwrap().PROJECT.PACKAGE;
+                                    let install_loc = format!(
+                                        "{}/.snooze/bins/{}/",
+                                        home_dir.as_ref().unwrap(),
+                                        hashname
+                                    );
+                                    let args: Vec<&str> = vec!["/C", "cp", package, &install_loc];
+                                    verbose!(global_opts, "Building...");
+                                    let ctemp = env::current_dir().unwrap();
+                                    let status = Command::new("cmd").args(args).status()?;
+                                    if status.success() {
+                                        env::set_current_dir(curr_dir)?;
+                                        fs::remove_dir_all(ctemp)?;
+                                        Ok(())
+                                    } else {
+                                        quit(4);
+                                        Err("asdf".into())
+                                    }
+                                } else {
                                     quit(4);
                                     Err("asdf".into())
                                 }
                             }
-                        } else {
-                            errprint!("Error grabbing: '{}'", tool.NAME);
-                            continue_prompt(global_opts);
-                            return Err("Error grabbing".into());
-                        }
+                            Err(file) => {
+                                MISSINGFILEERROR.show_error(&file.1, global_opts);
+                                Err("Missing File".into())
+                            }
+                        };
+                        Ok(())
                     }
                     Err(..) => {
-                        errprint!("Error creating dir");
-                        return Err("Error creating dir".into());
+                        quit(4);
+                        Err("asdf".into())
                     }
                 }
+            } else {
+                errprint!("Error grabbing: '{}'", tool.NAME);
+                continue_prompt(global_opts);
+                return Err("Error grabbing".into());
             }
+        }
+        Err(..) => {
+            errprint!("Error creating dir");
+            return Err("Error creating dir".into());
         }
     }
 }
@@ -526,7 +550,7 @@ pub fn run_exec(
                 let args: Vec<&str> = parts.collect();
                 let status = Command::new(program).args(args).status()?;
                 if status.success() {
-                    verbose_info_print("Command executed".to_string(), &global_opts);
+                    verbose!(&global_opts, "Command '{}' OK", command);
                     okcount += 1;
                 } else {
                     errprint!("Error executing command: '{}'", command);
@@ -549,17 +573,15 @@ pub fn createfile(
     infoprint!("Creating file: {}", ufile_name);
     let mut ufile = File::create(&ufile_name).expect("[!] Error encountered while creating file!");
     let content = format!(
-        "PROJECT: {{
-  NAME: \"{}\",
-  DESCRIPTION: \"\",
-  VERSION: \"0.0.0\",
-  IS_LOADED: false,
-}}
-
+        "PROJECT:
+  NAME: {0}
+  PACKAGE: {0}
+  DESCRIPTION: ''
+  VERSION: 0.0.0
+  IS_LOADED: true
 ON:
   RUN:
-    - echo hello world
-
+  - echo hello world
 DEPENDANCIES:
   TOOLS:",
         &zfile_name_f
@@ -598,7 +620,7 @@ pub fn extension_exec(
         } else {
             to_exec = format!("{}/.snooze/ext/{}", home_dir.unwrap(), &argsv[1].to_owned());
         }
-        verbose_info_print(format!("Executing {}", to_exec).to_string(), global_opts);
+        verbose!(global_opts, "Executing {}", to_exec);
         let status = Command::new(to_exec.clone()).args(ext_args).status();
         match status {
             Ok(_val) => Ok(()),

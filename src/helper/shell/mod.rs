@@ -18,10 +18,13 @@ use std::{
 
 fn zzzsh_update_prompt(home_dir: &Result<String, env::VarError>) -> String {
     let mut future_prompt: Vec<String> = vec![];
-    let config_path = format!(
-        "{}\\.snooze\\profiles\\s614627\\cfg",
-        home_dir.as_ref().unwrap()
-    );
+    let config_path: String;
+    if cfg!(windows) {
+        config_path = format!("{}\\.snooze\\profiles\\{}\\cfg", home_dir.as_ref().unwrap(), env::var("USERNAME").unwrap());
+    } else {
+        config_path = format!("{}\\.snooze\\profiles\\{}\\cfg", home_dir.as_ref().unwrap(), env::var("USER").unwrap());
+    }
+
     if let Ok(v_file) = read_file_gpath(&config_path) {
         let reader: BufReader<File> = BufReader::new(v_file.0);
         let config: Result<UserConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
@@ -74,6 +77,8 @@ fn zzzsh_update_prompt(home_dir: &Result<String, env::VarError>) -> String {
                 }
             }
         }
+    } else {
+        future_prompt.push("$".to_string());
     };
     //println!("{}", future_prompt.join(" "));
     future_prompt.join("")
@@ -116,7 +121,7 @@ fn zzsh_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, has
 
                     command => {
                         if zzzsh_check_is_local(command, &env_cmds) {
-                            println!("LOCAL");
+                            //println!("LOCAL");
                             //zzzsh_exec(command, args, previous_cmd, commands);
                             let stdin = previous_cmd.map_or(Stdio::inherit(), |output: Child| {
                                 Stdio::from(output.stdout.unwrap())
@@ -134,7 +139,7 @@ fn zzsh_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, has
                                 hashname,
                                 command
                             );
-                            println!("{}", cmd_local);
+                            //println!("{}", cmd_local);
                             let output = Command::new(cmd_local)
                                 .args(args)
                                 .stdin(stdin)
