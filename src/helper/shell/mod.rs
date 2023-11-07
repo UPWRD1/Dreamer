@@ -129,7 +129,7 @@ fn zzsh_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, has
                             };
 
                             let cmd_local = format!(
-                                "{0}/.dreamer/bins/{1}/{2}",
+                                "{0}/.snooze/bins/{1}/{2}",
                                 home_dir.clone().unwrap(),
                                 hashname,
                                 command

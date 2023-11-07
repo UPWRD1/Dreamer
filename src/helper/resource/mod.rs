@@ -111,6 +111,14 @@ macro_rules! questionprintnof {
     }};
 }
 
+macro_rules! verbose {
+    ($global_opts:expr, $($args:tt)*) => {
+        if verbose_check($global_opts) {
+            infoprint!($($args)*);
+        }
+    };
+}
+
 /// Macro for printing the shell
 macro_rules! shellprint {
     () => {
@@ -128,18 +136,6 @@ macro_rules! tipprint {
     };
     ($($arg:tt)*) => {{
         println!("    {0} {1}", "[i]".black(), format_args!($($arg)*))
-    }};
-}
-
-/// Print UI verbose messages to stdout
-macro_rules! vbprint {
-    () => {
-        println!();
-    };
-    (&g_o:expr, $($arg:tt)*) => {{
-        if $g_o[0] {
-            infoprint!("{}", format_args!($($arg)*))
-        }
     }};
 }
 

@@ -5,8 +5,8 @@ use crate::{
         check_arg_len,
         colored::Colorize,
         read_file,
-        resource::{calculate_hash, continue_prompt, input_fmt, read_file_gpath},
-        usage_and_quit, verbose_check, verbose_info_print, Tool, ToolInstallMethod, ZzzConfig,
+        resource::{calculate_hash, continue_prompt, input_fmt, read_file_gpath, verbose_check},
+        run, usage_and_quit, verbose_info_print, Tool, ToolInstallMethod, ZzzConfig,
     },
     list, STARTCMD,
 };
@@ -168,7 +168,12 @@ pub fn load_exec(
                     infoprint!("This action will download the above, and run any tasks included.");
                 }
                 continue_prompt(global_opts);
-                infoprint!("Getting dependancies from file: '{}'", filepath);
+                verbose!(global_opts, "Getting dependancies from file: '{}'", filepath);
+                /*
+                if verbose_check(global_opts) {
+                    infoprint!("Getting dependancies from file: '{}'", filepath);
+                }
+                */
                 for tool in &config.DEPENDANCIES.TOOLS {
                     let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir, global_opts);
                 }
@@ -227,10 +232,7 @@ fn tool_install(
     global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     env_cmds.push(tool.NAME.clone());
-    verbose_info_print(
-        format!("Installing {0} from {1}", tool.NAME, tool.LINK),
-        global_opts,
-    );
+    verbose!(&global_opts, "Installing {0} from {1}", tool.NAME, tool.LINK);
     let link = &tool.LINK;
     let method = &tool.METHOD;
     let link_str = link.to_string();
@@ -333,12 +335,12 @@ fn tool_install(
                         let _namef = format!("{0}{1}", dir_loc, tool.NAME);
                         let args: Vec<&str> =
                             vec!["/C", "git", "clone", &link_str, &dir_temp, "-q"];
-                        verbose_info_print("Cloning repo...".to_string(), global_opts);
+                        verbose!(&global_opts, "Cloning...");
                         let status = Command::new("cmd").args(args).status()?;
                         if status.success() {
                             match env::set_current_dir(&dir_temp) {
                                 Ok(()) => {
-                                    println!("Made it to {}", &dir_temp);
+                                    //println!("Made it to {}", &dir_temp);
                                     let argsv: Vec<String> =
                                         vec!["".to_string(), "".to_string(), "dream".to_string()];
                                     let _: Result<(), Box<dyn Error>> =
@@ -352,10 +354,6 @@ fn tool_install(
 
                                                 let args: Vec<&str> =
                                                     vec!["/C", "zzz", "run", "dream"];
-                                                verbose_info_print(
-                                                    "Building...".to_string(),
-                                                    global_opts,
-                                                );
                                                 let status =
                                                     Command::new("cmd").args(args).status()?;
                                                 if status.success() {
@@ -416,29 +414,79 @@ fn tool_install(
                     home_dir.as_mut().unwrap(),
                     hashname
                 );
+                let dir_temp = format!(
+                    "{0}/.snooze/ztemp/{1}/",
+                    home_dir.as_mut().unwrap(),
+                    hashname
+                );
                 match fs::create_dir_all(&dir_loc) {
                     Ok(..) => {
-                        let link_str_f = link_str.to_string();
-                        let namef = format!("{0}{1}", dir_loc, tool.NAME);
-                        let args: Vec<&str> =
-                            vec!["-c", "/usr/bin/curl", &link_str_f, "--output", &namef];
-                        let status = Command::new("bash").args(args).status()?;
-
+                        let curr_dir = env::current_dir().unwrap();
+                        let _namef = format!("{0}{1}", dir_loc, tool.NAME);
+                        let args: Vec<&str> = vec!["clone", &link_str, &dir_temp, "-q"];
+                        verbose_info_print("Cloning...".to_string(), global_opts);
+                        let status = Command::new("git").args(args).status()?;
                         if status.success() {
-                            let args2: Vec<&str> = vec!["-c", "chmod", "a+x", &namef];
-                            let status2 = Command::new("bash").args(args2).status()?;
-                            if status2.success() {
-                                verbose_info_print(
-                                    format!("'{}' installed", tool.NAME),
-                                    global_opts,
-                                );
-                                return Ok(());
-                            } else {
-                                errprint!("Error grabbing: '{}'", tool.NAME);
-                                return Err("Error grabbing".into());
+                            match env::set_current_dir(&dir_temp) {
+                                Ok(()) => {
+                                    //println!("Made it to {}", &dir_temp);
+                                    let argsv: Vec<String> =
+                                        vec!["".to_string(), "".to_string(), "dream".to_string()];
+                                    let _: Result<(), Box<dyn Error>> =
+                                        match read_file(&argsv, 2, STARTCMD) {
+                                            Ok(v_file) => {
+                                                let reader: BufReader<File> =
+                                                    BufReader::new(v_file.0);
+
+                                                let nconfig: Result<ZzzConfig, serde_yaml::Error> =
+                                                    serde_yaml::from_reader(reader);
+                                                let synthargs: Vec<String> = vec![
+                                                    "zzz".to_string(),
+                                                    "run".to_string(),
+                                                    "dream".to_string(),
+                                                ];
+                                                let _ = run(synthargs, &global_opts);
+                                                if status.success() {
+                                                    let package = &nconfig.unwrap().PROJECT.PACKAGE;
+                                                    let install_loc = format!(
+                                                        "{}/.snooze/bins/{}/",
+                                                        home_dir.as_ref().unwrap(),
+                                                        hashname
+                                                    );
+                                                    let args: Vec<&str> =
+                                                        vec![package, &install_loc];
+                                                    let ctemp = env::current_dir().unwrap();
+                                                    let status =
+                                                        Command::new("cp").args(args).status()?;
+                                                    if status.success() {
+                                                        //println!("removing {:?}", ctemp.clone());
+                                                        env::set_current_dir(curr_dir)?;
+                                                        fs::remove_dir_all(ctemp)?;
+                                                        Ok(())
+                                                    } else {
+                                                        quit(4);
+                                                        Err("asdf".into())
+                                                    }
+                                                } else {
+                                                    quit(4);
+                                                    Err("asdf".into())
+                                                }
+                                            }
+                                            Err(file) => {
+                                                MISSINGFILEERROR.show_error(&file.1, global_opts);
+                                                Err("Missing File".into())
+                                            }
+                                        };
+                                    Ok(())
+                                }
+                                Err(..) => {
+                                    quit(4);
+                                    Err("asdf".into())
+                                }
                             }
                         } else {
                             errprint!("Error grabbing: '{}'", tool.NAME);
+                            continue_prompt(global_opts);
                             return Err("Error grabbing".into());
                         }
                     }
@@ -478,7 +526,7 @@ pub fn run_exec(
                 let args: Vec<&str> = parts.collect();
                 let status = Command::new(program).args(args).status()?;
                 if status.success() {
-                    vbprint!(&global_opts, "yay");
+                    verbose_info_print("Command executed".to_string(), &global_opts);
                     okcount += 1;
                 } else {
                     errprint!("Error executing command: '{}'", command);
@@ -487,7 +535,7 @@ pub fn run_exec(
             }
             if cmdcount == okcount {
                 println!();
-                vbprint!(&global_opts, "All tasks completed successfully");
+                successprint!("All tasks completed successfully");
             }
             Ok(())
         }
