@@ -101,13 +101,22 @@ macro_rules! questionprint {
     }};
 }
 
+macro_rules! questionprint_no_res {
+    () => {
+        input!()
+    };
+    ($($arg:tt)*) => {{
+        println!("    {0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
+    }};
+}
+
 /// Wrapper for input!()
 macro_rules! questionprintnof {
     () => {
         input!()
     };
     ($($arg:tt)*) => {{
-        input!("    {0}{1} ", "=", format_args!($($arg)*))
+        input!("    {0}{1} ", "", format_args!($($arg)*))
     }};
 }
 
@@ -498,7 +507,8 @@ pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
 pub fn continue_prompt(global_opts: &[bool]) {
     if global_opts[1] {
     } else {
-        match questionprint!("Do you want to continue? (y/n)").as_str() {
+        questionprint_no_res!("Do you want to continue? (y/n)");
+        match questionprintnof!("==>").as_str() {
             "y" | "Y" => {}
             &_ => {
                 quit(0);

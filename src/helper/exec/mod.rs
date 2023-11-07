@@ -56,6 +56,15 @@ pub fn list_exec(
                 }
             }
 
+
+            2 => {
+                infoprint!("Dependancies for {}:", filepath);
+                for tool in config.DEPENDANCIES.TOOLS {
+                    println!("\t- {}", tool.NAME);
+                }
+                Ok(())
+            }
+
             _ => {
                 infoprint!("Dependancies for {}:", filepath);
                 let mut num = 1;
@@ -163,10 +172,8 @@ pub fn load_exec(
             let hashname = calculate_hash(&config.PROJECT.NAME);
             //println!("{}", hash_string(&config.project.name));
             if !config.PROJECT.IS_LOADED || global_opts[2] {
-                let _ = list(argsv.clone(), 1, global_opts);
-                if global_opts[2] {
-                    infoprint!("This action will download the above, and run any tasks included.");
-                }
+                let _ = list(argsv.clone(), 2, global_opts);
+                verbose!(global_opts,"This action will download the above, and run any tasks included.");
                 continue_prompt(global_opts);
                 verbose!(
                     global_opts,
@@ -550,7 +557,6 @@ pub fn run_exec(
                 let args: Vec<&str> = parts.collect();
                 let status = Command::new(program).args(args).status()?;
                 if status.success() {
-                    verbose!(&global_opts, "Command '{}' OK", command);
                     okcount += 1;
                 } else {
                     errprint!("Error executing command: '{}'", command);
