@@ -2,7 +2,7 @@
 // Extern Imports
 extern crate colored;
 
-use crate::helper::colored::Colorize;
+use crate::helper::{colored::Colorize, refs::{AVAILABLE_ARGS, VERBOSEARG, FORCEARG, CLEANARG, DUMBARG}};
 
 // Local Imports
 use super::refs::{ADDCMD, AVAILABLE_CMDS, EXTCMD, HELPCMD, LISTCMD, NEWCMD, RUNCMD, STARTCMD};
@@ -19,7 +19,6 @@ use std::{
     hash::{Hash, Hasher},
     io,
     io::{BufRead, Write},
-    iter::*,
 };
 
 /// Print UI Error messages to stderr
@@ -28,7 +27,7 @@ macro_rules! errprint {
         eprint!("\n")
     };
     ($($arg:tt)*) => {{
-        eprintln!("    {0} {1}","[!]".red().bold(), format_args!($($arg)*))
+        eprintln!("{0} {1}","[!]".red().bold(), format_args!($($arg)*))
     }};
 }
 /// Print UI Info messages to stdout
@@ -37,7 +36,7 @@ macro_rules! infoprint {
         print!("\n")
     };
     ($($arg:tt)*) => {{
-        println!("    {0} {1}","[i]".blue().bold(), format_args!($($arg)*))
+        println!("{0} {1}","[i]".blue().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -47,7 +46,7 @@ macro_rules! warnprint {
         eprint!("\n")
     };
     ($($arg:tt)*) => {{
-        eprintln!("    {0} {1}", "[w]".yellow().bold(), format_args!($($arg)*))
+        eprintln!("{0} {1}", "[w]".yellow().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -57,7 +56,7 @@ macro_rules! successprint {
         print!("\n")
     };
     ($($arg:tt)*) => {{
-        println!("    {0} {1}", "[✔]".green().bold(), format_args!($($arg)*))
+        println!("{0} {1}", "[✔]".green().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -97,7 +96,7 @@ macro_rules! questionprint {
         input!()
     };
     ($($arg:tt)*) => {{
-        input!("    {0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
+        input!("{0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -106,7 +105,7 @@ macro_rules! questionprint_no_res {
         input!()
     };
     ($($arg:tt)*) => {{
-        println!("    {0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
+        println!("{0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
     }};
 }
 
@@ -116,7 +115,7 @@ macro_rules! questionprintnof {
         input!()
     };
     ($($arg:tt)*) => {{
-        input!("    {0}{1} ", "", format_args!($($arg)*))
+        input!("{0}{1} ", "", format_args!($($arg)*))
     }};
 }
 
@@ -144,7 +143,7 @@ macro_rules! tipprint {
         input!()
     };
     ($($arg:tt)*) => {{
-        let content = format!("    {0} {1}", "[i]".black(), format_args!($($arg)*));
+        let content = format!("{0} {1}", "[i]".black(), format_args!($($arg)*));
         println!("{}", content.black());
     }};
 }
@@ -185,14 +184,14 @@ pub fn printusage_no_f(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
         println!(
-            "\t{0}{1}{2}",
+            "    {0}{1}{2}",
             "Usage: ".bold(),
             " ./zzz ".black(),
             msg.black()
         );
     } else if ostype == "linux" || ostype == "macos" {
         println!(
-            "\t{0}{1}{2}",
+            "    {0}{1}{2}",
             "Usage: ".bold(),
             " zzz ".black(),
             msg.black()
@@ -256,18 +255,18 @@ pub fn clear_term() {
 }
 
 pub fn long_infoprint(longdesc: &str) {
-    print!("\t{}", "Info: \n".bold());
+    print!("    {}", "Info: \n".bold());
     let char_desc: Vec<char> = longdesc.chars().collect();
-    print!("\t\t");
+    print!("             ");
     let mut numchars = 0;
     for i in &char_desc {
         numchars += 1;
         if numchars > 40 && (i == &' ' || i == &'\n') {
-            print!("\n\t");
-            print!("        ");
+            print!("\n");
+            print!("             ");
             numchars = 0;
         } else if i == &'!' {
-            print!("\n\n\t\t");
+            print!("\n\n");
         } else {
             print!("{i}");
         }
@@ -289,7 +288,7 @@ pub fn printusetemplate() {
 }
 
 fn printaliases(cmd: &Cmd<'_>) {
-    print!("\t{}", "Aliases: ".bold());
+    print!("    {}", "Aliases: ".bold());
     for i in cmd.aliases {
         print!("{}, ", i);
     }
@@ -321,6 +320,8 @@ pub fn extrahelp(cmd: &str, homedir: Result<String, VarError>) {
         for path in paths {
             println!("\t - {}", path.unwrap().file_name().to_str().unwrap())
         }
+    } else if cmd == "args" {
+
     } else {
         match matchcmd(cmd) {
             Ok(cmd) => printextrahelp(cmd),
@@ -559,6 +560,55 @@ pub fn clean_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool
 }
 
 pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
+    let argsvstring = argsv.join(" ");
+    let argsvcv = argsvstring.chars().collect::<Vec<char>>();
+    //dbg!(&argsvstring);
+    if argsvstring.contains(&"-".to_string()) {
+        let flags_index = argsvcv.iter().position(|x| x == &'-').unwrap();
+        let flags_ctnr = &argsvcv[flags_index + 1..];
+        //println!("{:?}", flags_ctnr);
+        for i in flags_ctnr {
+            println!("{i}");
+            for j in AVAILABLE_ARGS {
+                //println!("{:?}", j);
+                if j.switch == i.to_string() {
+                    match j {
+                        &VERBOSEARG => {
+                            //println!("VB");
+                            verbose_set_true(argsv, global_opts);
+                            break;
+                        },
+                        &FORCEARG => {
+                            //println!("F");
+                            force_set_true(argsv, global_opts);
+                            break;
+                        },
+                        &CLEANARG => {
+                            //println!("C");
+                            clean_set_true(argsv, global_opts);
+                            break;
+                        },
+                        &DUMBARG => {
+                            //println!("D");
+                            colored::control::set_override(false);
+                            break;
+                        },
+                        &_ => {
+                            break;
+                        },
+                    }
+                }
+            }
+        }
+        global_opts.to_vec()
+    } else {
+        global_opts.to_vec()
+    }
+}
+
+/*
+
+pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
     let dream_flags: Vec<&str> = vec!["-v", "-f", "-c", "-d"];
     for i in dream_flags {
         if argsv.contains(&i.to_owned().to_string()) {
@@ -585,6 +635,8 @@ pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
     }
     global_opts.to_vec()
 }
+
+ */
 
 pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     let paths = std::fs::read_dir(dir)?

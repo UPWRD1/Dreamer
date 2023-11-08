@@ -1,0 +1,15 @@
+[i] Dependancies for test.zzz.yaml:
+	- motion
+[i] This action will download the above, and run any tasks included.
+[i] Getting dependancies from file: 'test.zzz.yaml'
+[i] Installing motion from https://github.com/MotionLang/motion.git
+[i] Cloning...
+[i] Running 'dream.zzz.yaml': 
+
+asdf
+
+[✔] All tasks completed successfully
+[i] Building...
+[i] Counting Sheep...
+[i] Dreamer 2023 (0.1.0) (type 'exit()' to exit)
+[>] s614627@unify-cli $ [>] s614627@unify-cli $ 
