@@ -5,16 +5,16 @@ extern crate colored;
 use crate::helper::colored::Colorize;
 
 // Local Imports
-use super::refs::{ADDCMD, EXTCMD, HELPCMD, LISTCMD, STARTCMD, NEWCMD, RUNCMD, AVAILABLE_CMDS};
+use super::refs::{ADDCMD, AVAILABLE_CMDS, EXTCMD, HELPCMD, LISTCMD, NEWCMD, RUNCMD, STARTCMD};
 use crate::helper::{errors::Printerror, Cmd, PathBuf, NOFILESERROR};
 
 // std imports
 use std::{
     collections::hash_map::DefaultHasher,
     env::{self, VarError},
-    fs,
     error::Error,
     fmt::Arguments,
+    fs,
     fs::File,
     hash::{Hash, Hasher},
     io,
@@ -144,7 +144,8 @@ macro_rules! tipprint {
         input!()
     };
     ($($arg:tt)*) => {{
-        println!("    {0} {1}", "[i]".black(), format_args!($($arg)*))
+        let content = format!("    {0} {1}", "[i]".black(), format_args!($($arg)*));
+        println!("{}", content.black());
     }};
 }
 
@@ -312,7 +313,7 @@ pub fn extrahelp(cmd: &str, homedir: Result<String, VarError>) {
             print!("\t - ");
             printhelp(x);
         }
-        println!("");
+        println!();
         infoprint!("Available Extensions:");
         let fhdir = format!("{}/.snooze/ext/", homedir.unwrap());
         let paths = fs::read_dir(fhdir).unwrap();
@@ -321,11 +322,11 @@ pub fn extrahelp(cmd: &str, homedir: Result<String, VarError>) {
             println!("\t - {}", path.unwrap().file_name().to_str().unwrap())
         }
     } else {
-    match matchcmd(cmd) {
-        Ok(cmd) => printextrahelp(cmd),
-        Err(..) => usage_and_quit(HELPCMD.name, "Invalid Command Name"),
+        match matchcmd(cmd) {
+            Ok(cmd) => printextrahelp(cmd),
+            Err(..) => usage_and_quit(HELPCMD.name, "Invalid Command Name"),
+        }
     }
-}
 }
 
 pub fn check_arg_len(argsv: Vec<String>, lentocheck: usize) -> bool {
@@ -359,8 +360,7 @@ pub fn read_file(
                 let filepath = argsv[to_open].to_string().to_owned() + ".zzz.yaml";
                 let file: Result<File, std::io::Error> = File::open(filepath.clone());
                 match file {
-                    Ok(v_file) => {
-                        Ok((v_file, filepath))},
+                    Ok(v_file) => Ok((v_file, filepath)),
                     Err(error) => Err((error.to_string(), filepath)),
                 }
             }
@@ -549,7 +549,6 @@ pub fn force_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool
     }
 }
 
-
 pub fn clean_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
     if argsv.contains(&"-c".to_string()) {
         global_opts.insert(2, true);
@@ -559,9 +558,8 @@ pub fn clean_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool
     }
 }
 
-
 pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    let dream_flags: Vec<&str> = vec!["-v", "-f", "-c"];
+    let dream_flags: Vec<&str> = vec!["-v", "-f", "-c", "-d"];
     for i in dream_flags {
         if argsv.contains(&i.to_owned().to_string()) {
             match i {
@@ -575,6 +573,10 @@ pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
 
                 "-c" => {
                     clean_set_true(argsv, global_opts);
+                }
+
+                "-d" => {
+                    colored::control::set_override(false);
                 }
 
                 &_ => {}

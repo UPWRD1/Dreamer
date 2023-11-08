@@ -18,12 +18,19 @@ use std::{
 
 fn zzzsh_update_prompt(home_dir: &Result<String, env::VarError>) -> String {
     let mut future_prompt: Vec<String> = vec![];
-    let config_path: String;
-    if cfg!(windows) {
-        config_path = format!("{}\\.snooze\\profiles\\{}\\cfg", home_dir.as_ref().unwrap(), env::var("USERNAME").unwrap());
+    let config_path: String = if cfg!(windows) {
+        format!(
+            "{}\\.snooze\\profiles\\{}\\cfg",
+            home_dir.as_ref().unwrap(),
+            env::var("USERNAME").unwrap()
+        )
     } else {
-        config_path = format!("{}\\.snooze\\profiles\\{}\\cfg", home_dir.as_ref().unwrap(), env::var("USER").unwrap());
-    }
+        format!(
+            "{}\\.snooze\\profiles\\{}\\cfg",
+            home_dir.as_ref().unwrap(),
+            env::var("USER").unwrap()
+        )
+    };
 
     if let Ok(v_file) = read_file_gpath(&config_path) {
         let reader: BufReader<File> = BufReader::new(v_file.0);
@@ -115,6 +122,14 @@ fn zzsh_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, has
                     }
                     "exit()" => {
                         quit(0);
+                    }
+
+                    "help()" | "info()" => {
+                        infoprint!(
+                            "Dreamer is a project dependancy grabber\n\tVersion: {}",
+                            SELF_VERSION
+                        );
+                        tipprint!("You are currently in a dream. To exit, type 'exit()'")
                     }
 
                     "clear" | "cls" => clear_term(),

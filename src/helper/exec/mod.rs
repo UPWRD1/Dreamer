@@ -23,7 +23,26 @@ use std::{
     process::Command,
 };
 
-use super::resource::quit;
+use super::resource::{quit, read_file_gpath_no_f};
+
+pub fn read_config(filepath: &String, global_opts: &[bool]) -> Result<ZzzConfig, String> {
+    match read_file_gpath_no_f(filepath) {
+        Ok(v_file) => {
+            let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(&v_file.0);
+            match config {
+                Err(_) => {
+                    MISSINGFILEERROR.show_error(filepath, global_opts);
+                    Err("Invalid Config".into())
+                }
+                Ok(con) => Ok(con),
+            }
+        }
+        Err(..) => {
+            MISSINGFILEERROR.show_error(filepath, global_opts);
+            Err("Invalid Config".into())
+        }
+    }
+}
 
 pub fn list_exec(
     v_file: File,
@@ -36,7 +55,7 @@ pub fn list_exec(
     let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            INVALIDFILEERR.show_error(&filepath, global_opts);
+            MISSINGFILEERROR.show_error(&filepath, global_opts);
             Err("Invalid Config".into())
         }
 
@@ -55,7 +74,6 @@ pub fn list_exec(
                     Ok(())
                 }
             }
-
 
             2 => {
                 infoprint!("Dependancies for {}:", filepath);
@@ -165,26 +183,31 @@ pub fn load_exec(
     let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            INVALIDFILEERR.show_error(&filepath, global_opts);
+            MISSINGFILEERROR.show_error(&filepath, global_opts);
             Err("Invalid Config".into())
         }
         Ok(mut config) => {
-            let hashname = calculate_hash(&config.PROJECT.NAME);
+            let tohash = format!(
+                "{}{}{}{}",
+                &config.PROJECT.NAME,
+                &config.PROJECT.DESCRIPTION,
+                &config.PROJECT.PACKAGE,
+                &config.PROJECT.VERSION
+            );
+            let hashname = calculate_hash(&tohash);
             //println!("{}", hash_string(&config.project.name));
             if !config.PROJECT.IS_LOADED || global_opts[2] {
                 let _ = list(argsv.clone(), 2, global_opts);
-                verbose!(global_opts,"This action will download the above, and run any tasks included.");
+                verbose!(
+                    global_opts,
+                    "This action will download the above, and run any tasks included."
+                );
                 continue_prompt(global_opts);
                 verbose!(
                     global_opts,
                     "Getting dependancies from file: '{}'",
                     filepath
                 );
-                /*
-                if verbose_check(global_opts) {
-                    infoprint!("Getting dependancies from file: '{}'", filepath);
-                }
-                */
                 for tool in &config.DEPENDANCIES.TOOLS {
                     let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir, global_opts);
                 }
@@ -224,7 +247,6 @@ pub fn load_deps(
                 );
 
                 return result;
-                //Ok(result)
             }
             Err(file) => {
                 MISSINGFILEERROR.show_error(&file.1, global_opts);
@@ -243,12 +265,7 @@ fn tool_install(
     global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     env_cmds.push(tool.NAME.clone());
-    verbose!(
-        &global_opts,
-        "Installing {0} from {1}",
-        tool.NAME,
-        tool.LINK
-    );
+    verbose!(global_opts, "Installing {0} from {1}", tool.NAME, tool.LINK);
     let link = &tool.LINK;
     let method = &tool.METHOD;
     let link_str = link.to_string();
@@ -326,7 +343,7 @@ fn windows_link_install(
     match fs::create_dir_all(&dir_loc) {
         Ok(..) => {
             let namef = format!("{0}{1}", dir_loc, tool.NAME);
-            let args: Vec<&str> = vec!["/C", "curl", &link_str, "--output", &namef, "--silent"];
+            let args: Vec<&str> = vec!["/C", "curl", link_str, "--output", &namef, "--silent"];
             //println!("{:?}", args);
 
             let status = Command::new("cmd").args(args).status()?;
@@ -393,7 +410,7 @@ fn unix_git_install(
                                     serde_yaml::from_reader(reader);
                                 let synthargs: Vec<String> =
                                     vec!["zzz".to_string(), "run".to_string(), "dream".to_string()];
-                                let _ = run(synthargs, &global_opts);
+                                let _ = run(synthargs, global_opts);
                                 if status.success() {
                                     let package = &nconfig.unwrap().PROJECT.PACKAGE;
                                     let install_loc = format!(
@@ -433,12 +450,12 @@ fn unix_git_install(
             } else {
                 errprint!("Error grabbing: '{}'", tool.NAME);
                 continue_prompt(global_opts);
-                return Err("Error grabbing".into());
+                Err("Error grabbing".into())
             }
         }
         Err(..) => {
             errprint!("Error creating dir");
-            return Err("Error creating dir".into());
+            Err("Error creating dir".into())
         }
     }
 }
@@ -464,8 +481,8 @@ fn windows_git_install(
         Ok(..) => {
             let curr_dir = env::current_dir().unwrap();
             let _namef = format!("{0}{1}", dir_loc, tool.NAME);
-            let args: Vec<&str> = vec!["/C", "git", "clone", &link_str, &dir_temp, "-q"];
-            verbose!(&global_opts, "Cloning...");
+            let args: Vec<&str> = vec!["/C", "git", "clone", link_str, &dir_temp, "-q"];
+            verbose!(global_opts, "Cloning...");
             let status = Command::new("cmd").args(args).status()?;
             if status.success() {
                 match env::set_current_dir(&dir_temp) {
@@ -521,12 +538,12 @@ fn windows_git_install(
             } else {
                 errprint!("Error grabbing: '{}'", tool.NAME);
                 continue_prompt(global_opts);
-                return Err("Error grabbing".into());
+                Err("Error grabbing".into())
             }
         }
         Err(..) => {
             errprint!("Error creating dir");
-            return Err("Error creating dir".into());
+            Err("Error creating dir".into())
         }
     }
 }
@@ -634,6 +651,46 @@ pub fn extension_exec(
                 INVALIDEXTERROR.show_error(&to_exec, global_opts);
                 Err("Bad command exec".into())
             }
+        }
+    }
+}
+
+pub fn forget_exec(
+    home_dir: Result<String, env::VarError>,
+    filepath: &String,
+    global_opts: &[bool],
+) -> Result<(), String> {
+    let config = read_config(filepath, global_opts);
+    match config {
+        Ok(conf) => {
+            let tohash = format!(
+                "{}{}{}{}",
+                &conf.PROJECT.NAME,
+                &conf.PROJECT.DESCRIPTION,
+                &conf.PROJECT.PACKAGE,
+                &conf.PROJECT.VERSION
+            );
+            let hashname = calculate_hash(&tohash);
+            //println!("{}", hashname);
+            let pathtorm = format!("{}/.snooze/bins/{}", home_dir.as_ref().unwrap(), hashname);
+            let pathtorm_f = format!("~/.snooze/bins/{}", hashname);
+            warnprint!("This will remove '{}'!", pathtorm_f);
+            continue_prompt(global_opts);
+            match fs::remove_dir_all(pathtorm) {
+                Ok(..) => {
+                    successprint!("Forgotten");
+                }
+                Err(..) => {
+                    errprint!("This dream hasn't been loaded, or has already been forgotten.");
+                    tipprint!("No changes occurred.")
+                }
+            }
+
+            Ok(())
+        }
+        Err(..) => {
+            quit(4);
+            Err("asdf".into())
         }
     }
 }

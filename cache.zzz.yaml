@@ -1,0 +1,9 @@
+CACHE:
+  PACKAGES:
+    "motion":
+      NAME: "motion"
+      TYPE: "package"
+      METHOD: "curl-run"
+      LINK: "https://github.com/MotionLang/motion/archive/refs/tags/v1.0.0.zip"
+
+    "asdf":

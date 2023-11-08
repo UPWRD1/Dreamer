@@ -215,29 +215,6 @@ pub fn start(
     }
 }
 
-pub fn grab(
-    argsv: Vec<String>,
-    env_cmds: Vec<String>,
-    home_dir: Result<String, env::VarError>,
-    global_opts: &[bool],
-) -> Result<(), Box<dyn Error>> {
-    match load_deps(
-        argsv.to_owned(),
-        &env_cmds.to_vec(),
-        home_dir.clone(),
-        global_opts,
-    ) {
-        Err(_) => {
-            quit(3);
-            Err("Error Loading".into())
-        }
-        Ok(..) => match run(argsv, global_opts) {
-            Ok(..) => Ok(()),
-            Err(..) => Err("asdf".into()),
-        },
-    }
-}
-
 pub fn start_and_run(
     argsv: Vec<String>,
     env_cmds: Vec<String>,
@@ -254,16 +231,12 @@ pub fn start_and_run(
             quit(2);
             Err("Error Loading".into())
         }
-        Ok(result) => match run(argsv.clone(), global_opts) {
+        Ok(..) => match run(argsv.clone(), global_opts) {
             Err(_) => {
                 quit(2);
                 Err("Error Running".into())
             }
-            Ok(..) => {
-                dbg!(&argsv.clone());
-                init_shell(result.0, home_dir, result.1);
-                Ok(())
-            }
+            Ok(..) => Ok(()),
         },
     }
 }
@@ -279,7 +252,7 @@ pub fn list(argsv: Vec<String>, way: usize, global_opts: &[bool]) -> Result<(), 
             Ok(result)
         }
         Err(file) => {
-            INVALIDFILEERR.show_error(&file.1, global_opts);
+            MISSINGFILEERROR.show_error(&file.1, global_opts);
             Err(())
         }
     };
@@ -350,6 +323,23 @@ pub fn remove(args: Vec<String>, global_opts: &[bool]) {
             }
         }
     }
+}
+
+pub fn forget(args: Vec<String>, home_dir: Result<String, env::VarError>, global_opts: &[bool]) {
+    if check_arg_len(args.clone(), 2) {
+        usage_and_quit(FORGETCMD.name, "Missing Filename!")
+    }
+
+    let _ = match read_file(&args, 2, LISTCMD) {
+        Ok(v_file) => {
+            let result = forget_exec(home_dir, &v_file.1, global_opts);
+            Ok(result)
+        }
+        Err(file) => {
+            MISSINGFILEERROR.show_error(&file.1, global_opts);
+            Err(())
+        }
+    };
 }
 
 pub fn invalid_args_notify(args: Vec<String>) {

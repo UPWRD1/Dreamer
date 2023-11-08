@@ -18,7 +18,6 @@ pub struct ZzzError<'a> {
     kind: ZzzErrorType,
 }
 
-
 pub const INVALIDFILEERR: ZzzError = ZzzError {
     exit_code: 3,
     message: "Invalid config file ",
@@ -55,19 +54,23 @@ impl Printerror for ZzzError<'_> {
             Iferr => {
                 let msg = format!("{}{}", self.message, filename);
                 errprint!("{}", msg);
-                infoprint!(
+                tipprint!(
                     "Help: Try 'zzz new {}' to create a new zzz.yaml file.",
                     filename
                 );
                 quit(self.exit_code as i32);
             }
             Mferr => {
-                errprint!("Invalid config file '{}'", filename);
-    quit(2);
+                errprint!("File '{}' not found!", filename);
+                tipprint!(
+                    "Help: Try 'zzz new {}' to create a new zzz.yaml file.",
+                    filename
+                );
+                quit(2);
             }
             Nferr => {
                 errprint!("{}", self.message);
-                infoprint!("Help: Try 'zzz init <filename>' to create a new zzz.yaml file.");
+                tipprint!("Help: Try 'zzz init <filename>' to create a new zzz.yaml file.");
                 quit_silent(6);
             }
             Bcerr => {

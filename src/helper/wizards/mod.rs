@@ -1,5 +1,10 @@
 /// Subcommand Wizards for missing arguments.
-use super::{colored::Colorize, continue_prompt, input_fmt, resource::{print_file_list, quit}, ToolInstallMethod};
+use super::{
+    colored::Colorize,
+    continue_prompt, input_fmt,
+    resource::{print_file_list, quit},
+    ToolInstallMethod,
+};
 
 use std::error::Error;
 
@@ -18,12 +23,8 @@ pub fn add_cmd_wizard() -> Result<(String, String, ToolInstallMethod), Box<dyn E
             let md = questionprint!("Install Method:");
             let mut method: ToolInstallMethod = ToolInstallMethod::LINKZIP;
             match md.as_str() {
-                "1" => {
-                    method = ToolInstallMethod::LINKZIP
-                }
-                "2" => {
-                    method = ToolInstallMethod::GIT
-                }
+                "1" => method = ToolInstallMethod::LINKZIP,
+                "2" => method = ToolInstallMethod::GIT,
                 _ => {
                     quit(4);
                 }

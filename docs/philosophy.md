@@ -1,5 +1,5 @@
 # Philosophy
-The unify project tries to abide by the following principles:
+The dreamer project tries to abide by the following principles:
 
 - Power through _simplicity._
   - A simpler, leaner project is stronger in the end.

@@ -13,14 +13,6 @@ pub struct Cmd<'a> {
     pub aliases: [&'a str; 2],
 }
 
-pub const RUNCMD: Cmd = Cmd {
-    name: "run",
-    desc: "Executes a .zzz.yaml file",
-    longdesc: "Runs the content in the dreamfile provide by <filename>.",
-    usage: "run <filename>",
-    aliases: ["run", "r"],
-};
-
 pub const HELPCMD: Cmd = Cmd {
     name: "help",
     desc: "This command",
@@ -31,26 +23,18 @@ pub const HELPCMD: Cmd = Cmd {
 
 pub const NEWCMD: Cmd = Cmd {
     name: "new",
-    desc: "Creates a new .zzz.yaml file",
-    longdesc: "Creates a new .zzz.yaml file from <filename>. If no filename is provided a wizard will launch to create one.",
+    desc: "Creates a new dreamfile",
+    longdesc: "Creates a new dreamfile from <filename>. If no filename is provided a wizard will launch to create one.",
     usage: "new <filename>",
     aliases: ["new", "n"],
 };
 
 pub const STARTCMD: Cmd = Cmd {
     name: "start",
-    desc: "Starts dreaming a .zzz.yaml file",
+    desc: "Starts dreaming a dreamfile",
     longdesc: "Starts and grabs the dependancies found in a dreamfile. If no filename is provided, zzz will prompt for one.",
     usage: "start [filename]",
     aliases: ["start", "s"],
-};
-
-pub const GRABCMD: Cmd = Cmd {
-    name: "grab",
-    desc: "Grabs the dependancies of a dreamfile",
-    longdesc: "Grabs the dependancies found in a dreamfile. If no filename is provided, zzz will prompt for one.",
-    usage: "grab [filename]",
-    aliases: ["grab", "g"],
 };
 
 pub const LISTCMD: Cmd = Cmd {
@@ -69,6 +53,24 @@ pub const ADDCMD: Cmd = Cmd {
     aliases: ["add", "a"],
 };
 
+pub const REMOVECMD: Cmd = Cmd {
+    name: "remove",
+    desc: "Removes a dependancy from a dreamfile",
+    longdesc: "Removes a dependancy from a dreamfile provide by <filename>.",
+    usage: "remove <filename>",
+    aliases: ["remove", "rm"],
+};
+
+pub const FORGETCMD: Cmd = Cmd {
+    name: "forget",
+    desc: "Removes dream binaries",
+    longdesc:
+        "Removes the directory containing dream binaries given a dreamfile provided by <filename>.",
+    usage: "forget <filename>",
+    aliases: ["forget", "f"],
+};
+
+///DEPRECATED
 pub const EXTCMD: Cmd = Cmd {
     name: "ext",
     desc: "Runs an extension",
@@ -77,18 +79,26 @@ pub const EXTCMD: Cmd = Cmd {
     aliases: ["ext", "@"],
 };
 
-pub const REMOVECMD: Cmd = Cmd {
-    name: "remove",
-    desc: "Removes a dependancy from a .zzz.yaml file",
-    longdesc: "Removes a dependancy from a .zzz.yaml file provide by <filename>.",
-    usage: "remove <filename>",
-    aliases: ["remove", "rm"],
+///DEPRECATED
+pub const RUNCMD: Cmd = Cmd {
+    name: "run",
+    desc: "Executes a dreamfile",
+    longdesc: "Runs the content in the dreamfile provide by <filename>.",
+    usage: "run <filename>",
+    aliases: ["run", "r"],
 };
 
-pub const AVAILABLE_CMDS: [&Cmd; 9] = [
-    &HELPCMD, &STARTCMD, &RUNCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD, &REMOVECMD, &GRABCMD
+///DEPRECATED
+pub const GRABCMD: Cmd = Cmd {
+    name: "grab",
+    desc: "Grabs the dependancies of a dreamfile",
+    longdesc: "Grabs the dependancies found in a dreamfile. If no filename is provided, zzz will prompt for one.",
+    usage: "grab [filename]",
+    aliases: ["grab", "g"],
+};
+
+pub const AVAILABLE_CMDS: [&Cmd; 8] = [
+    &HELPCMD, &STARTCMD, &NEWCMD, &LISTCMD, &ADDCMD, &EXTCMD, &REMOVECMD, &GRABCMD,
 ];
 
-pub const COMMON_CMDS: [&Cmd; 5] = [
-    &HELPCMD, &NEWCMD, &STARTCMD, &ADDCMD, &REMOVECMD,
-];
+pub const COMMON_CMDS: [&Cmd; 5] = [&HELPCMD, &NEWCMD, &STARTCMD, &ADDCMD, &REMOVECMD];

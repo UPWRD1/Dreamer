@@ -6,10 +6,10 @@ extern crate serde_yaml;
 // Local imports
 pub mod helper;
 use helper::{
-    add, extension, help, invalid_args_notify, list, start, new,
-    refs::{ADDCMD, HELPCMD, LISTCMD, STARTCMD, NEWCMD, RUNCMD},
+    add, extension, forget, help, invalid_args_notify, list, new,
+    refs::{ADDCMD, HELPCMD, LISTCMD, NEWCMD, RUNCMD, STARTCMD},
     resource::argparse,
-    run,
+    run, start,
 };
 
 // std imports
@@ -17,9 +17,9 @@ use std::env::{self};
 use std::iter::*;
 
 use crate::helper::{
-    refs::{REMOVECMD, GRABCMD},
+    refs::{FORGETCMD, REMOVECMD},
     remove,
-    resource::scan_flags, grab,
+    resource::scan_flags,
 };
 /*
 Error codes:
@@ -56,9 +56,11 @@ pub fn cli() {
             _ if argparse(&args, 1, NEWCMD) => {
                 let _ = new(args, &global_options);
             }
+
             _ if argparse(&args, 1, RUNCMD) => {
                 let _ = run(args, &global_options);
             }
+
             _ if argparse(&args, 1, HELPCMD) => {
                 help(args, home_dir);
             }
@@ -74,15 +76,13 @@ pub fn cli() {
             _ if argparse(&args, 1, REMOVECMD) => {
                 remove(args, &global_options);
             }
-            _ if argparse(&args, 1, GRABCMD) => {
-                let _ = grab(args, ENV_COMMANDS, home_dir, &global_options);
-            }
 
+            _ if argparse(&args, 1, FORGETCMD) => {
+                forget(args, home_dir, &global_options);
+            }
             _ => match extension(&args, home_dir, &global_options) {
-                Ok(..) => {},
-                Err(..) => {
-                    invalid_args_notify(args)
-                }
+                Ok(..) => {}
+                Err(..) => invalid_args_notify(args),
             }, // Create new plufile
         }
     }
