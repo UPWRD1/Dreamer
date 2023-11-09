@@ -2,10 +2,15 @@
 // Extern Imports
 extern crate colored;
 
-use crate::helper::{colored::Colorize, refs::{AVAILABLE_ARGS, VERBOSEARG, FORCEARG, CLEANARG, DUMBARG}};
+use crate::helper::{
+    colored::Colorize,
+    refs::{AVAILABLE_ARGS, CLEAN, CLEANARG, DUMBARG, FORCEARG, VERBOSEARG},
+};
 
 // Local Imports
-use super::refs::{ADDCMD, AVAILABLE_CMDS, EXTCMD, HELPCMD, LISTCMD, NEWCMD, RUNCMD, STARTCMD};
+use super::refs::{
+    ADDCMD, AVAILABLE_CMDS, EXTCMD, FORCE, HELPCMD, LISTCMD, NEWCMD, RUNCMD, STARTCMD, VERBOSE, DUMB,
+};
 use crate::helper::{errors::Printerror, Cmd, PathBuf, NOFILESERROR};
 
 // std imports
@@ -19,6 +24,7 @@ use std::{
     hash::{Hash, Hasher},
     io,
     io::{BufRead, Write},
+    sync::atomic::Ordering,
 };
 
 /// Print UI Error messages to stderr
@@ -120,8 +126,8 @@ macro_rules! questionprintnof {
 }
 
 macro_rules! verbose {
-    ($global_opts:expr, $($args:tt)*) => {
-        if verbose_check($global_opts) {
+    ($($args:tt)*) => {
+        if verbose_check() {
             infoprint!($($args)*);
         }
     };
@@ -321,7 +327,6 @@ pub fn extrahelp(cmd: &str, homedir: Result<String, VarError>) {
             println!("\t - {}", path.unwrap().file_name().to_str().unwrap())
         }
     } else if cmd == "args" {
-
     } else {
         match matchcmd(cmd) {
             Ok(cmd) => printextrahelp(cmd),
@@ -505,8 +510,8 @@ pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
     cmd.aliases.contains(&argsv[pos].as_str())
 }
 
-pub fn continue_prompt(global_opts: &[bool]) {
-    if global_opts[1] {
+pub fn continue_prompt() {
+    if FORCE.load(Ordering::Relaxed) {
     } else {
         questionprint_no_res!("Do you want to continue? (y/n)");
         match questionprintnof!("==>").as_str() {
@@ -518,48 +523,28 @@ pub fn continue_prompt(global_opts: &[bool]) {
     }
 }
 
-pub fn verbose_info_print(msg: String, global_opts: &[bool]) {
-    if verbose_check(global_opts) {
-        infoprint!("{msg}")
-    }
+pub fn verbose_check() -> bool {
+    VERBOSE.load(Ordering::Relaxed)
 }
 
-pub fn verbose_check(global_opts: &[bool]) -> bool {
-    if !global_opts.is_empty() {
-        global_opts[0]
-    } else {
-        false
-    }
+pub fn verbose_set_true() {
+    VERBOSE.store(true, Ordering::Relaxed);
 }
 
-pub fn verbose_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    if argsv.contains(&"-v".to_string()) {
-        global_opts.insert(0, true);
-        global_opts.to_vec()
-    } else {
-        global_opts.to_vec()
-    }
+pub fn force_set_true() {
+    FORCE.store(true, Ordering::Relaxed);
 }
 
-pub fn force_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    if argsv.contains(&"-f".to_string()) {
-        global_opts.insert(1, true);
-        global_opts.to_vec()
-    } else {
-        global_opts.to_vec()
-    }
+pub fn clean_set_true() {
+    CLEAN.store(true, Ordering::Relaxed);
 }
 
-pub fn clean_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    if argsv.contains(&"-c".to_string()) {
-        global_opts.insert(2, true);
-        global_opts.to_vec()
-    } else {
-        global_opts.to_vec()
-    }
+pub fn dumb_set_true() {
+    DUMB.store(true, Ordering::Relaxed);
 }
 
-pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
+
+pub fn scan_flags(argsv: &[String]) {
     let argsvstring = argsv.join(" ");
     let argsvcv = argsvstring.chars().collect::<Vec<char>>();
     //dbg!(&argsvstring);
@@ -568,41 +553,36 @@ pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
         let flags_ctnr = &argsvcv[flags_index + 1..];
         //println!("{:?}", flags_ctnr);
         for i in flags_ctnr {
-            println!("{i}");
+            //println!("{i}");
             for j in AVAILABLE_ARGS {
                 //println!("{:?}", j);
                 if j.switch == i.to_string() {
                     match j {
-                        &VERBOSEARG => {
-                            //println!("VB");
-                            verbose_set_true(argsv, global_opts);
+                        str if str == &VERBOSEARG => {
+                            verbose_set_true();
                             break;
-                        },
-                        &FORCEARG => {
-                            //println!("F");
-                            force_set_true(argsv, global_opts);
+                        }
+                        str if str == &FORCEARG => {
+                            force_set_true();
                             break;
-                        },
-                        &CLEANARG => {
-                            //println!("C");
-                            clean_set_true(argsv, global_opts);
+                        }
+                        str if str == &CLEANARG => {
+                            clean_set_true();
                             break;
-                        },
-                        &DUMBARG => {
-                            //println!("D");
+                        }
+                        str if str == &DUMBARG => {
+                            dumb_set_true();
                             colored::control::set_override(false);
                             break;
-                        },
+                        }
                         &_ => {
                             break;
-                        },
+                        }
                     }
                 }
             }
         }
-        global_opts.to_vec()
     } else {
-        global_opts.to_vec()
     }
 }
 
@@ -659,8 +639,7 @@ pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     if !paths.is_empty() {
         Ok(paths)
     } else {
-        let dummy: Vec<bool> = vec![false];
-        NOFILESERROR.show_error("dummy", &dummy);
+        NOFILESERROR.show_error("dummy");
         Err("No files".into())
     }
 }

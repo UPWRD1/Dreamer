@@ -8,10 +8,10 @@ use super::{
 
 use std::error::Error;
 
-pub fn init_cmd_wizard(global_opts: &[bool]) -> String {
+pub fn init_cmd_wizard() -> String {
     let filename = questionprint!("Enter a name for your project:");
     infoprint!("Your file will be created as {}.zzz.yaml.", filename);
-    continue_prompt(global_opts);
+    continue_prompt();
     let filename_f = format!("{}.zzz.yaml", filename);
     filename_f
 }

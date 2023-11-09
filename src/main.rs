@@ -38,49 +38,39 @@ pub fn cli() {
     let args: Vec<String> = env::args().collect(); // Argument collection
     let home_dir: Result<String, env::VarError> = env::var("HOME");
     pub const ENV_COMMANDS: Vec<String> = vec![];
-
-    let mut global_options: Vec<bool> = vec![false; 5];
-    /*
-    global options:
-    0: verbose
-    1: force
-    2: clean
-    3: dumb (no color)
-     */
-    scan_flags(&args, &mut global_options);
-    //let env_args: &Vec<bool> = &global_options;
+    scan_flags(&args);
     if args.clone().len() == 1 {
         help(args, home_dir);
     } else {
         match args[1] {
             _ if argparse(&args, 1, NEWCMD) => {
-                let _ = new(args, &global_options);
+                let _ = new(args);
             }
 
             _ if argparse(&args, 1, RUNCMD) => {
-                let _ = run(args, &global_options);
+                let _ = run(args);
             }
 
             _ if argparse(&args, 1, HELPCMD) => {
                 help(args, home_dir);
             }
             _ if argparse(&args, 1, STARTCMD) => {
-                let _ = start(args, ENV_COMMANDS, home_dir, &global_options);
+                let _ = start(args, ENV_COMMANDS, home_dir);
             }
             _ if argparse(&args, 1, LISTCMD) => {
-                let _ = list(args, 0, &global_options);
+                let _ = list(args, 0);
             }
             _ if argparse(&args, 1, ADDCMD) => {
-                let _ = add(args, &global_options);
+                let _ = add(args);
             }
             _ if argparse(&args, 1, REMOVECMD) => {
-                remove(args, &global_options);
+                remove(args);
             }
 
             _ if argparse(&args, 1, FORGETCMD) => {
-                forget(args, home_dir, &global_options);
+                forget(args, home_dir);
             }
-            _ => match extension(&args, home_dir, &global_options) {
+            _ => match extension(&args, home_dir) {
                 Ok(..) => {}
                 Err(..) => invalid_args_notify(args),
             }, // Create new plufile

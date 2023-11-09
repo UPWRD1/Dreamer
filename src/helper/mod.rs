@@ -113,15 +113,15 @@ pub struct UserConfig {
     user: UserConfigUser,
 }
 
-pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
+pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(RUNCMD.name, "Missing Filename!")
     }
 
     let _ = match read_file(&argsv, 2, RUNCMD) {
-        Ok(v_file) => run_exec(v_file.0, v_file.1, global_opts.to_vec()),
+        Ok(v_file) => run_exec(v_file.0, v_file.1),
         Err(file) => {
-            MISSINGFILEERROR.show_error(&file.1, global_opts);
+            MISSINGFILEERROR.show_error(&file.1);
             Err("Missing File".into())
         }
     };
@@ -156,7 +156,6 @@ pub fn help(argsv: Vec<String>, home_dir: Result<String, env::VarError>) {
 
 pub fn new(
     argsv: Vec<String>,
-    global_opts: &[bool],
 ) -> Result<std::string::String, std::string::String> {
     if argsv.len() == 3 {
         let zfile_name_f = &argsv[2];
@@ -165,7 +164,7 @@ pub fn new(
 
         if Path::new(ufile_name_str).exists() {
             errprint!("File {} already Exists!", ufile_name);
-            continue_prompt(global_opts);
+            continue_prompt();
             let _ = createfile(ufile_name, zfile_name_f);
             Ok("OK".to_string())
         } else {
@@ -179,7 +178,7 @@ pub fn new(
 
         if Path::new(ufile_name_str).exists() {
             errprint!("File {} already Exists!", ufile_name);
-            continue_prompt(global_opts);
+            continue_prompt();
             let _ = createfile(ufile_name, &zfile_name_f);
             Ok("OK".to_string())
         } else {
@@ -196,13 +195,11 @@ pub fn start(
     argsv: Vec<String>,
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
-    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     match load_deps(
         argsv.to_owned(),
         &env_cmds.to_vec(),
         home_dir.clone(),
-        global_opts,
     ) {
         Err(_) => {
             quit(3);
@@ -219,19 +216,17 @@ pub fn start_and_run(
     argsv: Vec<String>,
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
-    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     match load_deps(
         argsv.to_owned(),
         &env_cmds.to_vec(),
         home_dir.clone(),
-        global_opts,
     ) {
         Err(_) => {
             quit(2);
             Err("Error Loading".into())
         }
-        Ok(..) => match run(argsv.clone(), global_opts) {
+        Ok(..) => match run(argsv.clone()) {
             Err(_) => {
                 quit(2);
                 Err("Error Running".into())
@@ -241,60 +236,35 @@ pub fn start_and_run(
     }
 }
 
-pub fn list(argsv: Vec<String>, way: usize, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
+pub fn list(argsv: Vec<String>, way: usize) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(LISTCMD.name, "Missing Filename!")
     }
 
     let _ = match read_file(&argsv, 2, LISTCMD) {
         Ok(v_file) => {
-            let result = list_exec(v_file.0, v_file.1, way, global_opts);
+            let result = list_exec(v_file.0, v_file.1, way);
             Ok(result)
         }
         Err(file) => {
-            MISSINGFILEERROR.show_error(&file.1, global_opts);
+            MISSINGFILEERROR.show_error(&file.1);
             Err(())
         }
     };
     Err("Bad File".into())
 }
 
-pub fn add(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
+pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         match add_cmd_wizard() {
             Ok(vals) => {
-                let _ = add_exec(&vals.0, &vals.1, vals.2, global_opts);
+                let _ = add_exec(&vals.0, &vals.1, vals.2);
                 Ok(())
             }
 
             Err(err) => Err(err),
         }
     } else {
-        /*
-        let dep_to_get = &argsv[2];
-        match argsv.len() {
-            4 => {
-                let _ = match read_file_gpath(&argsv[3]) {
-                    Ok(v_file) => {
-                        let result = add_exec(&v_file.1, dep_to_get, , global_opts);
-                        Ok(result)
-                    }
-                    Err(file) => {
-                        errprint!("Cannot find file '{}'", file.1);
-                        infoprint!(
-                            "Help: Try 'zzz new {}' to create a new zzz.yaml file.",
-                            file.1
-                        );
-                        Err(())
-                    }
-                };
-            }
-            _ => {
-                usage_and_quit(ADDCMD.name, "Invalid arguments!");
-            }
-        }
-        */
-
         Err("Bad File".into())
     }
 }
@@ -302,21 +272,20 @@ pub fn add(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error
 pub fn extension(
     args: &Vec<String>,
     home_dir: Result<String, env::VarError>,
-    global_opts: &[bool],
 ) -> Result<(), String> {
     if check_arg_len(args.clone(), 1) {
         usage_and_quit(EXTCMD.name, "No Extension!")
     }
-    extension_exec(args, home_dir, global_opts)
+    extension_exec(args, home_dir)
 }
 
-pub fn remove(args: Vec<String>, global_opts: &[bool]) {
+pub fn remove(args: Vec<String>) {
     if check_arg_len(args.clone(), 3) {
-        let _ = remove_exec(&args[3], &args[2], global_opts);
+        let _ = remove_exec(&args[3], &args[2]);
     } else {
         match remove_cmd_wizard() {
             Ok(res) => {
-                let _ = remove_exec(&res.0, &res.1, global_opts);
+                let _ = remove_exec(&res.0, &res.1);
             }
             Err(..) => {
                 quit(4);
@@ -325,18 +294,18 @@ pub fn remove(args: Vec<String>, global_opts: &[bool]) {
     }
 }
 
-pub fn forget(args: Vec<String>, home_dir: Result<String, env::VarError>, global_opts: &[bool]) {
+pub fn forget(args: Vec<String>, home_dir: Result<String, env::VarError>) {
     if check_arg_len(args.clone(), 2) {
         usage_and_quit(FORGETCMD.name, "Missing Filename!")
     }
 
     let _ = match read_file(&args, 2, LISTCMD) {
         Ok(v_file) => {
-            let result = forget_exec(home_dir, &v_file.1, global_opts);
+            let result = forget_exec(home_dir, &v_file.1);
             Ok(result)
         }
         Err(file) => {
-            MISSINGFILEERROR.show_error(&file.1, global_opts);
+            MISSINGFILEERROR.show_error(&file.1);
             Err(())
         }
     };

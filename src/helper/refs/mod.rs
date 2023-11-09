@@ -1,6 +1,6 @@
 /// Defnew
 //ion of the Cmd type, and constant values for the commands.
-
+use core::sync::atomic::AtomicBool;
 pub trait EntryFunc {
     fn go() -> Result<(), ()>;
 }
@@ -139,4 +139,9 @@ pub static DUMBARG: Arg = Arg {
     index: 3,
 };
 
-pub const AVAILABLE_ARGS: [&Arg; 4] = [&VERBOSEARG, &FORCEARG, &CLEANARG, &DUMBARG];
+pub static VERBOSE: AtomicBool = AtomicBool::new(false);
+pub static FORCE: AtomicBool = AtomicBool::new(false);
+pub static CLEAN: AtomicBool = AtomicBool::new(false);
+pub static DUMB: AtomicBool = AtomicBool::new(false);
+
+pub static AVAILABLE_ARGS: [&Arg; 4] = [&VERBOSEARG, &FORCEARG, &CLEANARG, &DUMBARG];

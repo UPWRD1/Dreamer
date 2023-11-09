@@ -23,22 +23,22 @@ use std::{
     process::Command,
 };
 
-use super::resource::{quit, read_file_gpath_no_f};
+use super::{resource::{quit, read_file_gpath_no_f}, refs::CLEAN};
 
-pub fn read_config(filepath: &String, global_opts: &[bool]) -> Result<ZzzConfig, String> {
+pub fn read_config(filepath: &String) -> Result<ZzzConfig, String> {
     match read_file_gpath_no_f(filepath) {
         Ok(v_file) => {
             let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(&v_file.0);
             match config {
                 Err(_) => {
-                    MISSINGFILEERROR.show_error(filepath, global_opts);
+                    MISSINGFILEERROR.show_error(filepath);
                     Err("Invalid Config".into())
                 }
                 Ok(con) => Ok(con),
             }
         }
         Err(..) => {
-            MISSINGFILEERROR.show_error(filepath, global_opts);
+            MISSINGFILEERROR.show_error(filepath);
             Err("Invalid Config".into())
         }
     }
@@ -48,14 +48,13 @@ pub fn list_exec(
     v_file: File,
     filepath: String,
     way: usize,
-    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML
     let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            MISSINGFILEERROR.show_error(&filepath, global_opts);
+            MISSINGFILEERROR.show_error(&filepath);
             Err("Invalid Config".into())
         }
 
@@ -100,8 +99,7 @@ pub fn add_exec(
     filepath: &String,
     depname: &String,
     method: ToolInstallMethod,
-    global_opts: &[bool],
-) -> Result<(), Box<dyn Error>> {
+ ) -> Result<(), Box<dyn Error>> {
     let link = questionprint!("Enter link for '{}':", depname);
     match read_file_gpath(filepath) {
         Ok(v_file) => {
@@ -124,7 +122,7 @@ pub fn add_exec(
         }
         Err(file) => {
             println!("{}.", file.0);
-            MISSINGFILEERROR.show_error(&file.1, global_opts);
+            MISSINGFILEERROR.show_error(&file.1);
         }
     };
 
@@ -136,7 +134,6 @@ pub fn add_exec(
 pub fn remove_exec(
     filepath: &String,
     depname: &String,
-    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     match read_file_gpath(filepath) {
         Ok(v_file) => {
@@ -149,7 +146,7 @@ pub fn remove_exec(
                 toollist[index].NAME,
                 filepath
             );
-            continue_prompt(global_opts);
+            continue_prompt();
             toollist.remove(index);
             conf_f.PROJECT.IS_LOADED = false;
             let f = std::fs::OpenOptions::new()
@@ -161,7 +158,7 @@ pub fn remove_exec(
             serde_yaml::to_writer(f, &conf_f).unwrap();
         }
         Err(file) => {
-            MISSINGFILEERROR.show_error(&file.1, global_opts);
+            MISSINGFILEERROR.show_error(&file.1);
         }
     };
 
@@ -175,7 +172,6 @@ pub fn load_exec(
     filepath: String,
     mut env_cmds: Vec<String>,
     mut home_dir: Result<String, env::VarError>,
-    global_opts: &[bool],
     argsv: Vec<String>,
 ) -> Result<(Vec<String>, u64), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
@@ -183,7 +179,7 @@ pub fn load_exec(
     let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            MISSINGFILEERROR.show_error(&filepath, global_opts);
+            MISSINGFILEERROR.show_error(&filepath);
             Err("Invalid Config".into())
         }
         Ok(mut config) => {
@@ -196,20 +192,18 @@ pub fn load_exec(
             );
             let hashname = calculate_hash(&tohash);
             //println!("{}", hash_string(&config.project.name));
-            if !config.PROJECT.IS_LOADED || global_opts[2] {
-                let _ = list(argsv.clone(), 2, global_opts);
+            if !config.PROJECT.IS_LOADED || CLEAN.load(std::sync::atomic::Ordering::Relaxed) {
+                let _ = list(argsv.clone(), 2);
                 verbose!(
-                    global_opts,
                     "This action will download the above, and run any tasks included."
                 );
-                continue_prompt(global_opts);
+                continue_prompt();
                 verbose!(
-                    global_opts,
                     "Getting dependancies from file: '{}'",
                     filepath
                 );
                 for tool in &config.DEPENDANCIES.TOOLS {
-                    let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir, global_opts);
+                    let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir);
                 }
                 config.PROJECT.IS_LOADED = true;
                 let f = std::fs::OpenOptions::new()
@@ -229,7 +223,6 @@ pub fn load_deps(
     argsv: Vec<String>,
     env_cmds: &[String],
     home_dir: Result<String, env::VarError>,
-    global_opts: &[bool],
 ) -> Result<(Vec<String>, u64), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(STARTCMD.name, "Missing Filename!");
@@ -242,14 +235,13 @@ pub fn load_deps(
                     v_file.1,
                     env_cmds.to_vec(),
                     home_dir,
-                    global_opts,
                     argsv,
                 );
 
                 return result;
             }
             Err(file) => {
-                MISSINGFILEERROR.show_error(&file.1, global_opts);
+                MISSINGFILEERROR.show_error(&file.1);
                 Err(())
             }
         };
@@ -262,26 +254,25 @@ fn tool_install(
     hashname: u64,
     env_cmds: &mut Vec<String>,
     home_dir: &mut Result<String, env::VarError>,
-    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     env_cmds.push(tool.NAME.clone());
-    verbose!(global_opts, "Installing {0} from {1}", tool.NAME, tool.LINK);
+    verbose!("Installing {0} from {1}", tool.NAME, tool.LINK);
     let link = &tool.LINK;
     let method = &tool.METHOD;
     let link_str = link.to_string();
     match method {
         ToolInstallMethod::LINKZIP => {
             if cfg!(windows) {
-                windows_link_install(home_dir, hashname, tool, &link_str, global_opts)
+                windows_link_install(home_dir, hashname, tool, &link_str)
             } else {
-                unix_link_install(home_dir, hashname, &link_str, tool, global_opts)
+                unix_link_install(home_dir, hashname, &link_str, tool)
             }
         }
         &ToolInstallMethod::GIT => {
             if cfg!(windows) {
-                windows_git_install(home_dir, hashname, tool, &link_str, global_opts)
+                windows_git_install(home_dir, hashname, tool, &link_str)
             } else {
-                unix_git_install(home_dir, hashname, tool, link_str, global_opts)
+                unix_git_install(home_dir, hashname, tool, link_str)
             }
         }
     }
@@ -292,7 +283,6 @@ fn unix_link_install(
     hashname: u64,
     link_str: &String,
     tool: &Tool,
-    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     let dir_loc = format!(
         "{0}/.snooze/bins/{1}/",
@@ -310,7 +300,7 @@ fn unix_link_install(
                 let args2: Vec<&str> = vec!["-c", "chmod", "a+x", &namef];
                 let status2 = Command::new("bash").args(args2).status()?;
                 if status2.success() {
-                    verbose!(global_opts, "'{}' installed", tool.NAME);
+                    verbose!("'{}' installed", tool.NAME);
                     Ok(())
                 } else {
                     errprint!("Error grabbing: '{}'", tool.NAME);
@@ -333,7 +323,6 @@ fn windows_link_install(
     hashname: u64,
     tool: &Tool,
     link_str: &String,
-    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     let dir_loc = format!(
         "{0}\\.snooze\\bins\\{1}\\",
@@ -351,17 +340,17 @@ fn windows_link_install(
                 let args2: Vec<&str> = vec!["/C", "chmod", "a+x", &namef];
                 let status2 = Command::new("cmd").args(args2).status()?;
                 if status2.success() {
-                    verbose!(global_opts, "'{}' installed", tool.NAME);
+                    verbose!("'{}' installed", tool.NAME);
                     Ok(())
                 } else {
                     errprint!("Error grabbing: '{}'", tool.NAME);
-                    continue_prompt(global_opts);
+                    continue_prompt();
                     Err("Error grabbing".into())
                 }
                 //infoprint!("Command '{}' executed successfully", command);
             } else {
                 errprint!("Error grabbing: '{}'", tool.NAME);
-                continue_prompt(global_opts);
+                continue_prompt();
                 Err("Error grabbing".into())
             }
         }
@@ -377,7 +366,6 @@ fn unix_git_install(
     hashname: u64,
     tool: &Tool,
     link_str: String,
-    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     let dir_loc = format!(
         "{0}/.snooze/bins/{1}/",
@@ -394,7 +382,7 @@ fn unix_git_install(
             let curr_dir = env::current_dir().unwrap();
             let _namef = format!("{0}{1}", dir_loc, tool.NAME);
             let args: Vec<&str> = vec!["clone", &link_str, &dir_temp, "-q"];
-            verbose!(global_opts, "Cloning...");
+            verbose!("Cloning...");
             let status = Command::new("git").args(args).status()?;
             if status.success() {
                 match env::set_current_dir(&dir_temp) {
@@ -410,7 +398,7 @@ fn unix_git_install(
                                     serde_yaml::from_reader(reader);
                                 let synthargs: Vec<String> =
                                     vec!["zzz".to_string(), "run".to_string(), "dream".to_string()];
-                                let _ = run(synthargs, global_opts);
+                                let _ = run(synthargs);
                                 if status.success() {
                                     let package = &nconfig.unwrap().PROJECT.PACKAGE;
                                     let install_loc = format!(
@@ -436,7 +424,7 @@ fn unix_git_install(
                                 }
                             }
                             Err(file) => {
-                                MISSINGFILEERROR.show_error(&file.1, global_opts);
+                                MISSINGFILEERROR.show_error(&file.1);
                                 Err("Missing File".into())
                             }
                         };
@@ -449,7 +437,7 @@ fn unix_git_install(
                 }
             } else {
                 errprint!("Error grabbing: '{}'", tool.NAME);
-                continue_prompt(global_opts);
+                continue_prompt();
                 Err("Error grabbing".into())
             }
         }
@@ -465,7 +453,6 @@ fn windows_git_install(
     hashname: u64,
     tool: &Tool,
     link_str: &String,
-    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
     let dir_loc = format!(
         "{0}\\.snooze\\bins\\{1}\\",
@@ -482,7 +469,7 @@ fn windows_git_install(
             let curr_dir = env::current_dir().unwrap();
             let _namef = format!("{0}{1}", dir_loc, tool.NAME);
             let args: Vec<&str> = vec!["/C", "git", "clone", link_str, &dir_temp, "-q"];
-            verbose!(global_opts, "Cloning...");
+            verbose!("Cloning...");
             let status = Command::new("cmd").args(args).status()?;
             if status.success() {
                 match env::set_current_dir(&dir_temp) {
@@ -507,7 +494,7 @@ fn windows_git_install(
                                         hashname
                                     );
                                     let args: Vec<&str> = vec!["/C", "cp", package, &install_loc];
-                                    verbose!(global_opts, "Building...");
+                                    verbose!("Building...");
                                     let ctemp = env::current_dir().unwrap();
                                     let status = Command::new("cmd").args(args).status()?;
                                     if status.success() {
@@ -524,7 +511,7 @@ fn windows_git_install(
                                 }
                             }
                             Err(file) => {
-                                MISSINGFILEERROR.show_error(&file.1, global_opts);
+                                MISSINGFILEERROR.show_error(&file.1);
                                 Err("Missing File".into())
                             }
                         };
@@ -537,7 +524,7 @@ fn windows_git_install(
                 }
             } else {
                 errprint!("Error grabbing: '{}'", tool.NAME);
-                continue_prompt(global_opts);
+                continue_prompt();
                 Err("Error grabbing".into())
             }
         }
@@ -551,14 +538,13 @@ fn windows_git_install(
 pub fn run_exec(
     v_file: File,
     filepath: String,
-    global_opts: Vec<bool>,
 ) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into PluConfig struct
     let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            MISSINGFILEERROR.show_error(&filepath, &global_opts);
+            MISSINGFILEERROR.show_error(&filepath);
             Err("Invalid Config".into())
         }
 
@@ -577,7 +563,7 @@ pub fn run_exec(
                     okcount += 1;
                 } else {
                     errprint!("Error executing command: '{}'", command);
-                    continue_prompt(&global_opts);
+                    continue_prompt();
                 }
             }
             if cmdcount == okcount {
@@ -619,7 +605,6 @@ DEPENDANCIES:
 pub fn extension_exec(
     argsv: &Vec<String>,
     home_dir: Result<String, env::VarError>,
-    global_opts: &[bool],
 ) -> Result<(), String> {
     let mut to_exec: String;
     let argslen = &argsv.len();
@@ -643,12 +628,12 @@ pub fn extension_exec(
         } else {
             to_exec = format!("{}/.snooze/ext/{}", home_dir.unwrap(), &argsv[1].to_owned());
         }
-        verbose!(global_opts, "Executing {}", to_exec);
+        verbose!("Executing {}", to_exec);
         let status = Command::new(to_exec.clone()).args(ext_args).status();
         match status {
             Ok(_val) => Ok(()),
             Err(..) => {
-                INVALIDEXTERROR.show_error(&to_exec, global_opts);
+                INVALIDEXTERROR.show_error(&to_exec);
                 Err("Bad command exec".into())
             }
         }
@@ -658,9 +643,8 @@ pub fn extension_exec(
 pub fn forget_exec(
     home_dir: Result<String, env::VarError>,
     filepath: &String,
-    global_opts: &[bool],
 ) -> Result<(), String> {
-    let config = read_config(filepath, global_opts);
+    let config = read_config(filepath);
     match config {
         Ok(conf) => {
             let tohash = format!(
@@ -675,7 +659,7 @@ pub fn forget_exec(
             let pathtorm = format!("{}/.snooze/bins/{}", home_dir.as_ref().unwrap(), hashname);
             let pathtorm_f = format!("~/.snooze/bins/{}", hashname);
             warnprint!("This will remove '{}'!", pathtorm_f);
-            continue_prompt(global_opts);
+            continue_prompt();
             match fs::remove_dir_all(pathtorm) {
                 Ok(..) => {
                     successprint!("Forgotten");

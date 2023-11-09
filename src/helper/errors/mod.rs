@@ -2,7 +2,7 @@ use crate::helper::colored::Colorize;
 use crate::helper::errors::ZzzErrorType::{Bcerr, Iferr, Mferr, Nferr};
 use crate::helper::resource::*;
 pub trait Printerror {
-    fn show_error(&self, filename: &str, global_opts: &[bool]);
+    fn show_error(&self, filename: &str);
 }
 
 enum ZzzErrorType {
@@ -49,7 +49,7 @@ pub const INVALIDEXTERROR: ZzzError = ZzzError {
 };
 
 impl Printerror for ZzzError<'_> {
-    fn show_error(&self, filename: &str, global_opts: &[bool]) {
+    fn show_error(&self, filename: &str) {
         match self.kind {
             Iferr => {
                 let msg = format!("{}{}", self.message, filename);
@@ -75,7 +75,7 @@ impl Printerror for ZzzError<'_> {
             }
             Bcerr => {
                 errprint!("Command failed!");
-                continue_prompt(global_opts);
+                continue_prompt();
             }
             ZzzErrorType::Ixerr => {
                 errprint!("No such extension found!");
