@@ -1,0 +1,23 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "hot" ]
+    
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  update-hot:
+    name: Merge hot into dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: merge
+        uses: mtanzi/action-automerge@v1
+        id: merge
+        with:
+          github_token: ${{ github.token }}
+          source: 'hot'
+          target: 'dev'

@@ -11,10 +11,6 @@ use serde::{Deserialize, Serialize};
 #[macro_use]
 pub mod resource;
 use crate::helper::resource::*;
-//use crate::helper::resource::{
-//   check_arg_len, clear_term, extrahelp, input_fmt, matchcmd, printhelp, printusage,
-//    printusetemplate, quit, read_file, usage_and_quit, continue_prompt, read_file_gpath
-//};
 
 pub mod shell;
 
@@ -31,130 +27,174 @@ pub mod wizards;
 use wizards::*;
 
 // std imports
+use self::refs::COMMON_CMDS;
+use self::shell::init_shell;
 use std::env::{self};
 use std::error::Error;
-use std::iter::*;
+use std::fmt::Debug;
 use std::path::Path;
 use std::path::PathBuf;
-
-use self::refs::AVAILABLE_CMDS;
-use self::shell::init_shell;
+use std::str::FromStr;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct ProjectConfig {
-    name: String,
-    description: String,
-    version: String,
-    isloaded: bool,
+    NAME: String,
+    PACKAGE: String,
+    DESCRIPTION: String,
+    VERSION: String,
+    IS_LOADED: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub enum ToolInstallMethod {
+    LINKZIP,
+    GIT,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct Tool {
-    name: String,
-    link: String,
+    NAME: String,
+    LINK: String,
+    METHOD: ToolInstallMethod,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct DepsConfig {
-    tools: Vec<Tool>,
+    TOOLS: Vec<Tool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct RunConfig {
-    run: Vec<String>,
+    RUN: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UniConfig {
-    project: ProjectConfig,
-    r#do: RunConfig,
-    deps: DepsConfig,
+#[allow(non_snake_case)]
+pub struct ZzzConfig {
+    PROJECT: ProjectConfig,
+    ON: RunConfig,
+    DEPENDANCIES: DepsConfig,
 }
 
-
-fn usage(cmd: &str) {
-    printusage(matchcmd(cmd).unwrap().usage);
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum PromptItemKind {
+    HOMEDIR,
+    USRNAME,
+    CURRDIR,
 }
-/*
-fn usagenb(cmd: &str) {
-    printusagenb(matchcmd(cmd).unwrap().usage);
-}
-*/
 
-pub fn run(argsv: Vec<String>, global_opts: &[bool]) -> Result<(), Box<dyn Error>> {
+impl FromStr for PromptItemKind {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<PromptItemKind, Self::Err> {
+        match input {
+            "HOMEDIR" => Ok(PromptItemKind::HOMEDIR),
+            "CURRDIR" => Ok(PromptItemKind::CURRDIR),
+            "USRNAME" => Ok(PromptItemKind::USRNAME),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserConfigUser {
+    name: String,
+    prompt: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserConfig {
+    user: UserConfigUser,
+}
+
+pub fn run(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         usage_and_quit(RUNCMD.name, "Missing Filename!")
     }
 
     let _ = match read_file(&argsv, 2, RUNCMD) {
-        Ok(v_file) => run_exec(v_file.0, v_file.1, global_opts.to_vec()),
+        Ok(v_file) => run_exec(v_file.0, v_file.1),
         Err(file) => {
-            missing_file_error(&file.1);
+            MISSINGFILEERROR.show_error(&file.1);
             Err("Missing File".into())
         }
     };
     Ok(())
 }
 
-pub fn help(argsv: Vec<String>) {
-    if argsv.len() == 2 {
+pub fn help(argsv: Vec<String>, home_dir: Result<String, env::VarError>) {
+    if (argsv.len() == 2) || (argsv.len() == 1) {
         infoprint!(
-            "Unify is a project dependancy grabber\n\tVersion: {}\n",
+            "Dreamer is a project dependancy grabber\n\tVersion: {}\n",
             SELF_VERSION
         );
         printusetemplate();
-        infoprint!("{}", "Commands:".bold());
-        for x in AVAILABLE_CMDS {
+        infoprint!("{}", "Common Commands:".bold());
+        for x in COMMON_CMDS {
             print!("\t - ");
             printhelp(x);
         }
-        println!("");
+        println!();
         infoprint!(
             "For more information on a command, run {}",
-            "'unify help <command>'".black()
+            "'zzz help <command>'".black()
+        );
+        infoprint!(
+            "To see all available commands, run {}",
+            "'zzz help all'".black()
         );
     } else {
-        extrahelp(argsv[2].as_str());
+        extrahelp(argsv[2].as_str(), home_dir);
     }
 }
 
-pub fn init(
-    argsv: Vec<String>,
-    global_opts: &[bool],
-) -> Result<std::string::String, std::string::String> {
+pub fn new(argsv: Vec<String>) -> Result<std::string::String, std::string::String> {
     if argsv.len() == 3 {
-        let ufile_name: String = format!("{}.uni.yaml", &argsv[2]).to_owned();
+        let zfile_name_f = &argsv[2];
+        let ufile_name: String = format!("{}.zzz.yaml", zfile_name_f).to_owned();
         let ufile_name_str: &str = &ufile_name[..];
 
         if Path::new(ufile_name_str).exists() {
             errprint!("File {} already Exists!", ufile_name);
-            continue_prompt(global_opts);
-            let _ = createfile(ufile_name);
+            continue_prompt();
+            let _ = createfile(ufile_name, zfile_name_f);
             Ok("OK".to_string())
         } else {
-            let _ = createfile(ufile_name);
+            let _ = createfile(ufile_name, zfile_name_f);
+            Ok("OK".to_string())
+        }
+    } else if argsv.len() == 2 {
+        let zfile_name_f = "dream".to_string();
+        let ufile_name: String = "dream.zzz.yaml".to_string();
+        let ufile_name_str: &str = &ufile_name[..];
+
+        if Path::new(ufile_name_str).exists() {
+            errprint!("File {} already Exists!", ufile_name);
+            continue_prompt();
+            let _ = createfile(ufile_name, &zfile_name_f);
+            Ok("OK".to_string())
+        } else {
+            let _ = createfile(ufile_name, &zfile_name_f);
             Ok("OK".to_string())
         }
     } else {
-        usage_and_quit(INITCMD.name, "Invalid arguments!");
+        usage_and_quit(NEWCMD.name, "Invalid arguments!");
         Err("Invalid Arguments!".to_string())
     }
 }
 
-pub fn load(
+pub fn start(
     argsv: Vec<String>,
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
-    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
-    match load_deps(
-        argsv.to_owned(),
-        &env_cmds.to_vec(),
-        home_dir.clone(),
-        global_opts,
-    ) {
+    match load_deps(argsv.to_owned(), &env_cmds.to_vec(), home_dir.clone()) {
         Err(_) => {
             quit(3);
             Err("Error Loading".into())
@@ -166,31 +206,22 @@ pub fn load(
     }
 }
 
-pub fn load_and_run(
+pub fn start_and_run(
     argsv: Vec<String>,
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
-    global_opts: &[bool],
 ) -> Result<(), Box<dyn Error>> {
-    match load_deps(
-        argsv.to_owned(),
-        &env_cmds.to_vec(),
-        home_dir.clone(),
-        global_opts,
-    ) {
+    match load_deps(argsv.to_owned(), &env_cmds.to_vec(), home_dir.clone()) {
         Err(_) => {
             quit(2);
             Err("Error Loading".into())
         }
-        Ok(result) => match run(argsv, global_opts) {
+        Ok(..) => match run(argsv.clone()) {
             Err(_) => {
                 quit(2);
                 Err("Error Running".into())
             }
-            Ok(..) => {
-                init_shell(result.0, home_dir, result.1);
-                Ok(())
-            }
+            Ok(..) => Ok(()),
         },
     }
 }
@@ -206,7 +237,7 @@ pub fn list(argsv: Vec<String>, way: usize) -> Result<(), Box<dyn Error>> {
             Ok(result)
         }
         Err(file) => {
-            invalid_file_error(&file.1);
+            MISSINGFILEERROR.show_error(&file.1);
             Err(())
         }
     };
@@ -217,31 +248,57 @@ pub fn add(argsv: Vec<String>) -> Result<(), Box<dyn Error>> {
     if check_arg_len(argsv.clone(), 2) {
         match add_cmd_wizard() {
             Ok(vals) => {
-                let _ = add_exec(&vals.0, &vals.1);
+                let _ = add_exec(&vals.0, &vals.1, vals.2);
                 Ok(())
             }
 
             Err(err) => Err(err),
         }
     } else {
-        let dep_to_get = &argsv[2];
-
-        let _ = match read_file_gpath(&argsv[3]) {
-            Ok(v_file) => {
-                let result = add_exec(&v_file.1, dep_to_get);
-                Ok(result)
-            }
-            Err(file) => {
-                errprint!("Cannot find file '{}'", file.1);
-                infoprint!(
-                    "Help: Try 'unify init {}' to create a new uni.yaml file.",
-                    file.1
-                );
-                Err(())
-            }
-        };
         Err("Bad File".into())
     }
+}
+
+pub fn extension(
+    args: &Vec<String>,
+    home_dir: Result<String, env::VarError>,
+) -> Result<(), String> {
+    if check_arg_len(args.clone(), 1) {
+        usage_and_quit(EXTCMD.name, "No Extension!")
+    }
+    extension_exec(args, home_dir)
+}
+
+pub fn remove(args: Vec<String>) {
+    if check_arg_len(args.clone(), 3) {
+        let _ = remove_exec(&args[3], &args[2]);
+    } else {
+        match remove_cmd_wizard() {
+            Ok(res) => {
+                let _ = remove_exec(&res.0, &res.1);
+            }
+            Err(..) => {
+                quit(4);
+            }
+        }
+    }
+}
+
+pub fn forget(args: Vec<String>, home_dir: Result<String, env::VarError>) {
+    if check_arg_len(args.clone(), 2) {
+        usage_and_quit(FORGETCMD.name, "Missing Filename!")
+    }
+
+    let _ = match read_file(&args, 2, LISTCMD) {
+        Ok(v_file) => {
+            let result = forget_exec(home_dir, &v_file.1);
+            Ok(result)
+        }
+        Err(file) => {
+            MISSINGFILEERROR.show_error(&file.1);
+            Err(())
+        }
+    };
 }
 
 pub fn invalid_args_notify(args: Vec<String>) {
@@ -251,88 +308,82 @@ pub fn invalid_args_notify(args: Vec<String>) {
         args[1].red().bold(),
         "'".red().bold()
     );
-    infoprint!("Run 'unify help' to see available commands.");
-}
-
-pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
-    // Parse arguments
-    cmd.aliases.contains(&argsv[pos].as_str())
-}
-
-pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
-    let paths = std::fs::read_dir(dir)?
-        // Filter out all those directory entries which couldn't be read
-        .filter_map(|res| res.ok())
-        // Map the directory entries to paths
-        .map(|dir_entry| dir_entry.path())
-        // Filter out all paths with extensions other than .yaml or .yml
-        .filter_map(|path| {
-            if path
-                .extension()
-                .map_or(false, |ext| (ext == "yaml") || ext == "yml")
-            {
-                Some(path)
-            } else {
-                None
+    for i in AVAILABLE_CMDS {
+        match argshelp(&args, i) {
+            Ok(..) => {
+                break;
             }
-        })
-        .collect::<Vec<_>>();
-    if !paths.is_empty() {
-        Ok(paths)
-    } else {
-        no_files_error();
-        Err("No files".into())
-    }
-}
-
-pub fn verbose_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    if argsv.contains(&"-v".to_string()) {
-        global_opts.insert(0, true);
-        global_opts.to_vec()
-    } else {
-        global_opts.to_vec()
-    }
-}
-
-pub fn verbose_check(global_opts: &[bool]) -> bool {
-    if global_opts.len() != 0 {
-        global_opts[0]
-    } else {
-        false
-    }
-}
-
-pub fn verbose_info_print(msg: String, global_opts: &[bool]) {
-    if verbose_check(global_opts) {
-        infoprint!("{msg}")
-    }
-}
-
-pub fn force_set_true(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    if argsv.contains(&"-f".to_string()) {
-        global_opts.insert(1, true);
-        global_opts.to_vec()
-    } else {
-        global_opts.to_vec()
-    }
-}
-
-pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    let unify_flags: Vec<&str> = vec!["-v", "-f"];
-    for i in unify_flags {
-        if argsv.contains(&i.to_owned().to_string()) {
-            match i {
-                "-v" => {
-                    verbose_set_true(argsv, global_opts);
-                }
-
-                "-f" => {
-                    force_set_true(argsv, global_opts);
-                }
-
-                &_ => {}
+            Err(..) => {
+                continue;
             }
         }
     }
-    global_opts.to_vec()
+
+    infoprint!("Run 'zzz help' to see available commands.");
+}
+
+pub fn checkargs(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
+    cmd.aliases.contains(&argsv[pos].as_str())
+}
+
+fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, String> {
+    let (m, n) = (s.len(), t.len());
+    //println!("{m}");
+    //println!("{n}");
+    match way {
+        0 => {
+            for i in 0..m {
+                let mut j = 0;
+                //println!("{}", i + j);
+                while j < n && s[i + j] == t[j] {
+                    j += 1;
+                    //break;
+                }
+                if j == n {
+                    if n == m {
+                        println!("{:?} = {:?}", s, t);
+                        break;
+                    } else {
+                        tipprint!("Did you mean {}?", String::from_iter(t));
+                        return Ok("found".into());
+                    }
+                    //return Err("notfound".into());
+                }
+            }
+        }
+        _ => {
+            for _i in 0..m {
+                let mut j = 0;
+                //println!("{}", i + j);
+                //println!("{:?}", s);
+                //while j < n && s[i + j] == t[j] {
+                j += 1;
+                //break;
+                //}
+                if j == n {
+                    if n == m {
+                        println!("{:?} = {:?}", s, t);
+                    } else {
+                        tipprint!("Did you mean {}?", String::from_iter(s));
+                        return Ok("found".into());
+                    }
+                    return Err("notfound".into());
+                }
+            }
+        }
+    }
+    Err("notfound".into())
+}
+
+pub fn argshelp(args: &[String], cmdtc: &Cmd) -> Result<String, String> {
+    let t: Vec<char> = cmdtc.name.chars().collect();
+    let s: Vec<char> = args[1].chars().collect();
+    let (m, n) = (s.len(), t.len());
+    if m < n {
+        //println!("a");
+        argshelp_exec(t, s, 1) // swap(t, s)
+    } else {
+        //println!("b");
+        argshelp_exec(s, t, 0)
+    }
 }

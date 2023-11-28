@@ -1,73 +1,104 @@
 /// Primary Logic for the Shell Interceptor
-use super::{clear_term, colored::Colorize, resource::quit, SELF_VERSION};
+use super::{
+    clear_term,
+    colored::Colorize,
+    resource::{quit, read_file_gpath},
+    PromptItemKind, UserConfig, SELF_VERSION,
+};
 
 use std::{
     env::{self},
-    io::{stdin, stdout, Write},
+    fs::File,
+    io::{stdin, stdout, BufReader, Write},
     path::Path,
-    //str::SplitWhitespace,
     process::Child,
     process::{Command, Stdio},
+    str::FromStr,
 };
 
-/*
-fn unish_exec(command: &str, args: SplitWhitespace<'_>, previous_cmd: &mut Option<Child>, commands: &mut std::iter::Peekable<std::str::Split<'_, &str>>) {
-
-    let stdin = previous_cmd
-    .map_or(Stdio::inherit(), |output: Child| { Stdio::from(output.stdout.unwrap())});
-
-    let stdout = if commands.peek().is_some() {
-        Stdio::piped()
+fn zzzsh_update_prompt(home_dir: &Result<String, env::VarError>) -> String {
+    let mut future_prompt: Vec<String> = vec![];
+    let config_path: String = if cfg!(windows) {
+        format!(
+            "{}\\.snooze\\profiles\\{}\\cfg",
+            home_dir.as_ref().unwrap(),
+            env::var("USERNAME").unwrap()
+        )
     } else {
-        Stdio::inherit()
+        format!(
+            "{}\\.snooze\\profiles\\{}\\cfg",
+            home_dir.as_ref().unwrap(),
+            env::var("USER").unwrap()
+        )
     };
 
-    let output = Command::new(command)
-    .args(args)
-    .stdin(stdin)
-    .stdout(stdout)
-    .spawn();
+    if let Ok(v_file) = read_file_gpath(&config_path) {
+        let reader: BufReader<File> = BufReader::new(v_file.0);
+        let config: Result<UserConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
+        match config {
+            Err(e) => {
+                println!("{e}");
+                quit(1);
+            }
 
-    match output {
-        Ok(output) => { *previous_cmd = Some(output);},
-        Err(e) => {
-            let previous_cmd: &mut Option<Child> = &mut None;
-            errprint!("{}", e); }
-    }
+            Ok(config) => {
+                let x = config.user.prompt;
+                for i in x {
+                    let mut ivchars: Vec<char> = i.chars().collect();
+                    if (ivchars[0] == '%') && (ivchars[ivchars.len() - 1] == '%') {
+                        ivchars.remove(0);
+                        ivchars.remove(ivchars.len() - 1);
 
-}
-
-fn unish_check_builtin(command:&str , args: SplitWhitespace<'_>, previous_cmd: Option<Child>, commands: std::iter::Peekable<std::str::Split<'_, &str>>) {
-    match command {
-        "cd" => {
-            let new_dir = &args.peekable().peek().map_or("/", |x| *x);
-            let root = Path::new(new_dir);
-            if let Err(e) = env::set_current_dir(root) {
-                errprint!("{}", e);
+                        let sivchars: String = ivchars.into_iter().collect();
+                        let sivcharsenum = PromptItemKind::from_str(&sivchars).expect("er");
+                        match sivcharsenum {
+                            PromptItemKind::HOMEDIR => {
+                                future_prompt.push(home_dir.as_ref().unwrap().to_string())
+                            }
+                            PromptItemKind::CURRDIR => {
+                                let parent = env::current_dir()
+                                    .unwrap()
+                                    .as_path()
+                                    .parent()
+                                    .unwrap()
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string();
+                                let name = env::current_dir()
+                                    .unwrap()
+                                    .as_os_str()
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string();
+                                let mut fname = name.replace(&parent, "");
+                                fname.remove(0);
+                                future_prompt.push(fname);
+                            }
+                            PromptItemKind::USRNAME => {
+                                future_prompt.push(env::var("USERNAME").unwrap())
+                            }
+                        }
+                    } else {
+                        future_prompt.push(i);
+                    }
+                }
             }
         }
-        "exit" => {
-            quit();
-        }
-
-        "clear" | "cls" => print!("\x1B[2J\x1B[1;1H"),
-
-        command => {
-            unish_exec(command, args, previous_cmd, commands);
-        }
-    }
+    } else {
+        future_prompt.push("$".to_string());
+    };
+    //println!("{}", future_prompt.join(" "));
+    future_prompt.join("")
 }
 
-*/
-
-fn unish_check_is_local(cmd: &str, env_cmds: &[String]) -> bool {
+fn zzzsh_check_is_local(cmd: &str, env_cmds: &[String]) -> bool {
     env_cmds.contains(&cmd.to_string())
 }
 
-fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, hashname: u64) {
+fn zzsh_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, hashname: u64) {
     loop {
-        let curr_dir = env::current_dir();
-        shellprint!("(~{}) [unify] @> ", curr_dir.unwrap().to_string_lossy());
+        let u_prompt: String = zzzsh_update_prompt(&home_dir);
+        shellprint!("{}", u_prompt);
         stdout().flush().unwrap();
 
         let mut input = String::new();
@@ -80,7 +111,7 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, ha
             let mut parts = command.split_whitespace(); //.map(str::to_string).collect();
             if let Some(command) = parts.next() {
                 let args = parts;
-                //unish_check_builtin(command, args, previous_cmd, commands);
+                //zzzsh_check_builtin(command, args, previous_cmd, commands);
                 match command {
                     "cd" => {
                         let new_dir = &args.peekable().peek().map_or("/", |x| *x);
@@ -93,12 +124,20 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, ha
                         quit(0);
                     }
 
+                    "help()" | "info()" => {
+                        infoprint!(
+                            "Dreamer is a project dependancy grabber\n\tVersion: {}",
+                            SELF_VERSION
+                        );
+                        tipprint!("You are currently in a dream. To exit, type 'exit()'")
+                    }
+
                     "clear" | "cls" => clear_term(),
 
                     command => {
-                        if unish_check_is_local(command, &env_cmds) {
-                            println!("LOCAL");
-                            //unish_exec(command, args, previous_cmd, commands);
+                        if zzzsh_check_is_local(command, &env_cmds) {
+                            //println!("LOCAL");
+                            //zzzsh_exec(command, args, previous_cmd, commands);
                             let stdin = previous_cmd.map_or(Stdio::inherit(), |output: Child| {
                                 Stdio::from(output.stdout.unwrap())
                             });
@@ -108,20 +147,14 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, ha
                             } else {
                                 Stdio::inherit()
                             };
-                            /*
-                                                            let home_dir = env::home_dir().unwrap();
-                            let home_dir_u = home_dir.display();
-                            let command_pathv: String = format!("{home_dir_u}\\unify\\{command}");
-                            infoprint!("{}", command_pathv);
-                             */
 
                             let cmd_local = format!(
-                                "{0}/.unify/bins/{1}/{2}",
+                                "{0}/.snooze/bins/{1}/{2}",
                                 home_dir.clone().unwrap(),
                                 hashname,
                                 command
                             );
-                            println!("{}", cmd_local);
+                            //println!("{}", cmd_local);
                             let output = Command::new(cmd_local)
                                 .args(args)
                                 .stdin(stdin)
@@ -138,7 +171,6 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, ha
                                 }
                             }
                         } else {
-                            //unish_exec(command, args, previous_cmd, commands);
                             let stdin = previous_cmd.map_or(Stdio::inherit(), |output: Child| {
                                 Stdio::from(output.stdout.unwrap())
                             });
@@ -176,9 +208,7 @@ fn unish_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, ha
     }
 }
 pub fn init_shell(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, hashname: u64) {
-    infoprint!("Entering Virtual Environment...");
-    //pause();
-    //clear_term();
-    infoprint!("Unify {0} (type 'exit()' to exit)", SELF_VERSION);
-    unish_loop(env_cmds, home_dir, hashname);
+    infoprint!("Counting Sheep...");
+    infoprint!("Dreamer {0} (type 'exit()' to exit)", SELF_VERSION);
+    zzsh_loop(env_cmds, home_dir, hashname);
 }
