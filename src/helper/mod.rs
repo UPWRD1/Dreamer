@@ -48,24 +48,42 @@ pub struct ProjectConfig {
     IS_LOADED: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum ToolInstallMethod {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum ConfigToolInstallMethod {
     LINKZIP,
     GIT,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
-pub struct Tool {
+pub struct ConfigTool {
     NAME: String,
     LINK: String,
-    METHOD: ToolInstallMethod,
+    METHOD: ConfigToolInstallMethod,
+}
+
+pub struct TreeTool {
+    tool: ConfigTool,
+    dependancies: Vec<ConfigTool>
+}
+
+impl TreeTool {
+    fn new(tool: ConfigTool) -> Self {
+        TreeTool { tool, dependancies: vec![] }
+    }
+    
+    fn add<T>(&mut self, tool: T) {
+        where
+            T: TreeTool,
+            
+        self.dependancies.push(tool)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct DepsConfig {
-    TOOLS: Vec<Tool>,
+    TOOLS: Vec<ConfigTool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

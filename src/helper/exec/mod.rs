@@ -6,7 +6,7 @@ use crate::{
         colored::Colorize,
         read_file,
         resource::{calculate_hash, continue_prompt, input_fmt, read_file_gpath, verbose_check},
-        run, usage_and_quit, Tool, ToolInstallMethod, ZzzConfig,
+        run, usage_and_quit, ConfigTool, ConfigToolInstallMethod, ZzzConfig,
     },
     list, STARTCMD,
 };
@@ -25,7 +25,7 @@ use std::{
 
 use super::{
     refs::CLEAN,
-    resource::{quit, read_file_gpath_no_f},
+    resource::{quit, read_file_gpath_no_f}, TreeTool,
 };
 
 pub fn read_config(filepath: &String) -> Result<ZzzConfig, String> {
@@ -97,19 +97,19 @@ pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<d
 pub fn add_exec(
     filepath: &String,
     depname: &String,
-    method: ToolInstallMethod,
+    method: ConfigToolInstallMethod,
 ) -> Result<(), Box<dyn Error>> {
     let link = questionprint!("Enter link for '{}':", depname);
     match read_file_gpath(filepath) {
         Ok(v_file) => {
             let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(&v_file.0);
             let mut conf_f = config.unwrap();
-            let n_tool: Tool = Tool {
+            let n_tool: ConfigTool = ConfigTool {
                 NAME: depname.to_string(),
                 LINK: link,
                 METHOD: method,
             };
-            let mut tool_to_add: Vec<Tool> = vec![n_tool];
+            let mut tool_to_add: Vec<ConfigTool> = vec![n_tool];
             conf_f.DEPENDANCIES.TOOLS.append(&mut tool_to_add);
             conf_f.PROJECT.IS_LOADED = false;
             let f = std::fs::OpenOptions::new()
@@ -189,11 +189,12 @@ pub fn load_exec(
             let hashname = calculate_hash(&tohash);
             if !config.PROJECT.IS_LOADED || CLEAN.load(std::sync::atomic::Ordering::Relaxed) {
                 let _ = list(argsv.clone(), 2);
+                let mut root = TreeTool::new(ConfigTool { NAME: "".into(), LINK: "".into(), METHOD: ConfigToolInstallMethod::LINKZIP});
                 verbose!("This action will download the above, and run any tasks included.");
                 continue_prompt();
-                verbose!("Getting dependancies from file: '{}'", filepath);
+                verbose!("Identifing Dependancies from file: '{}'", filepath);
                 for tool in &config.DEPENDANCIES.TOOLS {
-                    let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir);
+                    let _ = tool_install(tool, hashname, &mut root, &mut env_cmds, &mut home_dir);
                 }
                 config.PROJECT.IS_LOADED = true;
                 let f = std::fs::OpenOptions::new()
@@ -234,8 +235,9 @@ pub fn load_deps(
 }
 
 fn tool_install(
-    tool: &Tool,
+    tool: &TreeTool,
     hashname: u64,
+    root: &mut TreeTool,
     env_cmds: &mut Vec<String>,
     home_dir: &mut Result<String, env::VarError>,
 ) -> Result<(), Box<dyn Error>> {
@@ -244,15 +246,16 @@ fn tool_install(
     let link = &tool.LINK;
     let method = &tool.METHOD;
     let link_str = link.to_string();
+    root.add(tool.clone());
     match method {
-        ToolInstallMethod::LINKZIP => {
+        ConfigToolInstallMethod::LINKZIP => {
             if cfg!(windows) {
                 windows_link_install(home_dir, hashname, tool, &link_str)
             } else {
                 unix_link_install(home_dir, hashname, &link_str, tool)
             }
         }
-        &ToolInstallMethod::GIT => {
+        &ConfigToolInstallMethod::GIT => {
             if cfg!(windows) {
                 windows_git_install(home_dir, hashname, tool, &link_str)
             } else {
@@ -266,7 +269,7 @@ fn unix_link_install(
     home_dir: &mut Result<String, env::VarError>,
     hashname: u64,
     link_str: &String,
-    tool: &Tool,
+    tool: &ConfigTool,
 ) -> Result<(), Box<dyn Error>> {
     let dir_loc = format!(
         "{0}/.snooze/bins/{1}/",
@@ -305,7 +308,7 @@ fn unix_link_install(
 fn windows_link_install(
     home_dir: &mut Result<String, env::VarError>,
     hashname: u64,
-    tool: &Tool,
+    tool: &ConfigTool,
     link_str: &String,
 ) -> Result<(), Box<dyn Error>> {
     let dir_loc = format!(
@@ -346,7 +349,7 @@ fn windows_link_install(
 fn unix_git_install(
     home_dir: &mut Result<String, env::VarError>,
     hashname: u64,
-    tool: &Tool,
+    tool: &ConfigTool,
     link_str: String,
 ) -> Result<(), Box<dyn Error>> {
     let dir_loc = format!(
@@ -431,7 +434,7 @@ fn unix_git_install(
 fn windows_git_install(
     home_dir: &mut Result<String, env::VarError>,
     hashname: u64,
-    tool: &Tool,
+    tool: &ConfigTool,
     link_str: &String,
 ) -> Result<(), Box<dyn Error>> {
     let dir_loc = format!(
@@ -462,18 +465,18 @@ fn windows_git_install(
 
                                 let nconfig: Result<ZzzConfig, serde_yaml::Error> =
                                     serde_yaml::from_reader(reader);
-
-                                let args: Vec<&str> = vec!["/C", "zzz", "run", "dream"];
-                                let status = Command::new("cmd").args(args).status()?;
-                                if status.success() {
+                                verbose!("Building...");
+                                let args: Vec<String> = vec!["zzz".into(), "run".into(), "dream".into()];
+                                let status = run(args);
+                                if status.is_ok() {
                                     let package = &nconfig.unwrap().PROJECT.PACKAGE;
+                                    println!("{package}");
                                     let install_loc = format!(
                                         "{}/.snooze/bins/{}/",
                                         home_dir.as_ref().unwrap(),
                                         hashname
                                     );
                                     let args: Vec<&str> = vec!["/C", "cp", package, &install_loc];
-                                    verbose!("Building...");
                                     let ctemp = env::current_dir().unwrap();
                                     let status = Command::new("cmd").args(args).status()?;
                                     if status.success() {
