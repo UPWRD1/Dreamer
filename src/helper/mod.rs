@@ -154,9 +154,7 @@ pub fn help(argsv: Vec<String>, home_dir: Result<String, env::VarError>) {
     }
 }
 
-pub fn new(
-    argsv: Vec<String>,
-) -> Result<std::string::String, std::string::String> {
+pub fn new(argsv: Vec<String>) -> Result<std::string::String, std::string::String> {
     if argsv.len() == 3 {
         let zfile_name_f = &argsv[2];
         let ufile_name: String = format!("{}.zzz.yaml", zfile_name_f).to_owned();
@@ -196,11 +194,7 @@ pub fn start(
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
 ) -> Result<(), Box<dyn Error>> {
-    match load_deps(
-        argsv.to_owned(),
-        &env_cmds.to_vec(),
-        home_dir.clone(),
-    ) {
+    match load_deps(argsv.to_owned(), &env_cmds.to_vec(), home_dir.clone()) {
         Err(_) => {
             quit(3);
             Err("Error Loading".into())
@@ -217,11 +211,7 @@ pub fn start_and_run(
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
 ) -> Result<(), Box<dyn Error>> {
-    match load_deps(
-        argsv.to_owned(),
-        &env_cmds.to_vec(),
-        home_dir.clone(),
-    ) {
+    match load_deps(argsv.to_owned(), &env_cmds.to_vec(), home_dir.clone()) {
         Err(_) => {
             quit(2);
             Err("Error Loading".into())

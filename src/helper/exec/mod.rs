@@ -23,7 +23,10 @@ use std::{
     process::Command,
 };
 
-use super::{resource::{quit, read_file_gpath_no_f}, refs::CLEAN};
+use super::{
+    refs::CLEAN,
+    resource::{quit, read_file_gpath_no_f},
+};
 
 pub fn read_config(filepath: &String) -> Result<ZzzConfig, String> {
     match read_file_gpath_no_f(filepath) {
@@ -44,11 +47,7 @@ pub fn read_config(filepath: &String) -> Result<ZzzConfig, String> {
     }
 }
 
-pub fn list_exec(
-    v_file: File,
-    filepath: String,
-    way: usize,
-) -> Result<(), Box<dyn Error>> {
+pub fn list_exec(v_file: File, filepath: String, way: usize) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML
     let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
@@ -99,7 +98,7 @@ pub fn add_exec(
     filepath: &String,
     depname: &String,
     method: ToolInstallMethod,
- ) -> Result<(), Box<dyn Error>> {
+) -> Result<(), Box<dyn Error>> {
     let link = questionprint!("Enter link for '{}':", depname);
     match read_file_gpath(filepath) {
         Ok(v_file) => {
@@ -131,10 +130,7 @@ pub fn add_exec(
     Ok(())
 }
 
-pub fn remove_exec(
-    filepath: &String,
-    depname: &String,
-) -> Result<(), Box<dyn Error>> {
+pub fn remove_exec(filepath: &String, depname: &String) -> Result<(), Box<dyn Error>> {
     match read_file_gpath(filepath) {
         Ok(v_file) => {
             let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(&v_file.0);
@@ -194,14 +190,9 @@ pub fn load_exec(
             //println!("{}", hash_string(&config.project.name));
             if !config.PROJECT.IS_LOADED || CLEAN.load(std::sync::atomic::Ordering::Relaxed) {
                 let _ = list(argsv.clone(), 2);
-                verbose!(
-                    "This action will download the above, and run any tasks included."
-                );
+                verbose!("This action will download the above, and run any tasks included.");
                 continue_prompt();
-                verbose!(
-                    "Getting dependancies from file: '{}'",
-                    filepath
-                );
+                verbose!("Getting dependancies from file: '{}'", filepath);
                 for tool in &config.DEPENDANCIES.TOOLS {
                     let _ = tool_install(tool, hashname, &mut env_cmds, &mut home_dir);
                 }
@@ -230,13 +221,7 @@ pub fn load_deps(
     } else {
         let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2, STARTCMD) {
             Ok(v_file) => {
-                let result = load_exec(
-                    v_file.0,
-                    v_file.1,
-                    env_cmds.to_vec(),
-                    home_dir,
-                    argsv,
-                );
+                let result = load_exec(v_file.0, v_file.1, env_cmds.to_vec(), home_dir, argsv);
 
                 return result;
             }
@@ -535,10 +520,7 @@ fn windows_git_install(
     }
 }
 
-pub fn run_exec(
-    v_file: File,
-    filepath: String,
-) -> Result<(), Box<dyn Error>> {
+pub fn run_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
     let reader: BufReader<File> = BufReader::new(v_file);
     // Parse the YAML into PluConfig struct
     let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);

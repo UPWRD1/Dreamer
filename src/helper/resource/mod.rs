@@ -586,38 +586,6 @@ pub fn scan_flags(argsv: &[String]) {
     }
 }
 
-/*
-
-pub fn scan_flags(argsv: &[String], global_opts: &mut Vec<bool>) -> Vec<bool> {
-    let dream_flags: Vec<&str> = vec!["-v", "-f", "-c", "-d"];
-    for i in dream_flags {
-        if argsv.contains(&i.to_owned().to_string()) {
-            match i {
-                "-v" => {
-                    verbose_set_true(argsv, global_opts);
-                }
-
-                "-f" => {
-                    force_set_true(argsv, global_opts);
-                }
-
-                "-c" => {
-                    clean_set_true(argsv, global_opts);
-                }
-
-                "-d" => {
-                    colored::control::set_override(false);
-                }
-
-                &_ => {}
-            }
-        }
-    }
-    global_opts.to_vec()
-}
-
- */
-
 pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     let paths = std::fs::read_dir(dir)?
         // Filter out all those directory entries which couldn't be read

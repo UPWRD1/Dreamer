@@ -46,11 +46,9 @@ pub fn cli() {
             _ if argparse(&args, 1, NEWCMD) => {
                 let _ = new(args);
             }
-
             _ if argparse(&args, 1, RUNCMD) => {
                 let _ = run(args);
             }
-
             _ if argparse(&args, 1, HELPCMD) => {
                 help(args, home_dir);
             }
@@ -66,14 +64,13 @@ pub fn cli() {
             _ if argparse(&args, 1, REMOVECMD) => {
                 remove(args);
             }
-
             _ if argparse(&args, 1, FORGETCMD) => {
                 forget(args, home_dir);
             }
             _ => match extension(&args, home_dir) {
                 Ok(..) => {}
                 Err(..) => invalid_args_notify(args),
-            }, // Create new plufile
+            },
         }
     }
 }
