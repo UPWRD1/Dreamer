@@ -87,7 +87,6 @@ fn zzzsh_update_prompt(home_dir: &Result<String, env::VarError>) -> String {
     } else {
         future_prompt.push("$".to_string());
     };
-    //println!("{}", future_prompt.join(" "));
     future_prompt.join("")
 }
 
@@ -136,8 +135,6 @@ fn zzsh_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, has
 
                     command => {
                         if zzzsh_check_is_local(command, &env_cmds) {
-                            //println!("LOCAL");
-                            //zzzsh_exec(command, args, previous_cmd, commands);
                             let stdin = previous_cmd.map_or(Stdio::inherit(), |output: Child| {
                                 Stdio::from(output.stdout.unwrap())
                             });
@@ -154,7 +151,6 @@ fn zzsh_loop(env_cmds: Vec<String>, home_dir: Result<String, env::VarError>, has
                                 hashname,
                                 command
                             );
-                            //println!("{}", cmd_local);
                             let output = Command::new(cmd_local)
                                 .args(args)
                                 .stdin(stdin)

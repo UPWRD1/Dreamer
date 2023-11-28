@@ -20,7 +20,7 @@ pub fn add_cmd_wizard() -> Result<(String, String, ToolInstallMethod), Box<dyn E
     match print_file_list(0) {
         Ok(res) => {
             let depname = questionprint!("Dependancy name:");
-            let md = questionprint!("Install Method:");
+            let md = questionprint!("Install Method:\n\t1: Zipped Source File\n\t2: Git Link");
             let mut method: ToolInstallMethod = ToolInstallMethod::LINKZIP;
             match md.as_str() {
                 "1" => method = ToolInstallMethod::LINKZIP,
