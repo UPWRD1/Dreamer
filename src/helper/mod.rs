@@ -328,13 +328,10 @@ pub fn checkargs(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
 
 fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, String> {
     let (m, n) = (s.len(), t.len());
-    //println!("{m}");
-    //println!("{n}");
     match way {
         0 => {
             for i in 0..m {
                 let mut j = 0;
-                //println!("{}", i + j);
                 while j < n && s[i + j] == t[j] {
                     j += 1;
                     //break;
@@ -354,12 +351,7 @@ fn argshelp_exec(s: Vec<char>, t: Vec<char>, way: usize) -> Result<String, Strin
         _ => {
             for _i in 0..m {
                 let mut j = 0;
-                //println!("{}", i + j);
-                //println!("{:?}", s);
-                //while j < n && s[i + j] == t[j] {
                 j += 1;
-                //break;
-                //}
                 if j == n {
                     if n == m {
                         println!("{:?} = {:?}", s, t);
@@ -380,10 +372,8 @@ pub fn argshelp(args: &[String], cmdtc: &Cmd) -> Result<String, String> {
     let s: Vec<char> = args[1].chars().collect();
     let (m, n) = (s.len(), t.len());
     if m < n {
-        //println!("a");
         argshelp_exec(t, s, 1) // swap(t, s)
     } else {
-        //println!("b");
         argshelp_exec(s, t, 0)
     }
 }

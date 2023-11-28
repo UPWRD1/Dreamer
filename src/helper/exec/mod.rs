@@ -187,7 +187,6 @@ pub fn load_exec(
                 &config.PROJECT.VERSION
             );
             let hashname = calculate_hash(&tohash);
-            //println!("{}", hash_string(&config.project.name));
             if !config.PROJECT.IS_LOADED || CLEAN.load(std::sync::atomic::Ordering::Relaxed) {
                 let _ = list(argsv.clone(), 2);
                 verbose!("This action will download the above, and run any tasks included.");
@@ -318,8 +317,6 @@ fn windows_link_install(
         Ok(..) => {
             let namef = format!("{0}{1}", dir_loc, tool.NAME);
             let args: Vec<&str> = vec!["/C", "curl", link_str, "--output", &namef, "--silent"];
-            //println!("{:?}", args);
-
             let status = Command::new("cmd").args(args).status()?;
             if status.success() {
                 let args2: Vec<&str> = vec!["/C", "chmod", "a+x", &namef];
@@ -372,7 +369,6 @@ fn unix_git_install(
             if status.success() {
                 match env::set_current_dir(&dir_temp) {
                     Ok(()) => {
-                        //println!("Made it to {}", &dir_temp);
                         let argsv: Vec<String> =
                             vec!["".to_string(), "".to_string(), "dream".to_string()];
                         let _: Result<(), Box<dyn Error>> = match read_file(&argsv, 2, STARTCMD) {
@@ -395,7 +391,6 @@ fn unix_git_install(
                                     let ctemp = env::current_dir().unwrap();
                                     let status = Command::new("cp").args(args).status()?;
                                     if status.success() {
-                                        //println!("removing {:?}", ctemp.clone());
                                         env::set_current_dir(curr_dir)?;
                                         fs::remove_dir_all(ctemp)?;
                                         Ok(())
@@ -459,7 +454,6 @@ fn windows_git_install(
             if status.success() {
                 match env::set_current_dir(&dir_temp) {
                     Ok(()) => {
-                        //println!("Made it to {}", &dir_temp);
                         let argsv: Vec<String> =
                             vec!["".to_string(), "".to_string(), "dream".to_string()];
                         let _: Result<(), Box<dyn Error>> = match read_file(&argsv, 2, STARTCMD) {
@@ -637,7 +631,6 @@ pub fn forget_exec(
                 &conf.PROJECT.VERSION
             );
             let hashname = calculate_hash(&tohash);
-            //println!("{}", hashname);
             let pathtorm = format!("{}/.snooze/bins/{}", home_dir.as_ref().unwrap(), hashname);
             let pathtorm_f = format!("~/.snooze/bins/{}", hashname);
             warnprint!("This will remove '{}'!", pathtorm_f);

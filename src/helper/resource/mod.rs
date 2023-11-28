@@ -233,7 +233,6 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
     }
     let result: String = questionprintnof!("==> ");
     let result_c: Vec<char> = result.chars().collect();
-    //println!("{}", result_c.len());
     if result_c.len() == 1 {
         match result_c[0] {
             '1'..='9' => return result_c,
@@ -437,7 +436,6 @@ pub fn print_file_list(way: usize) -> Result<(char, Vec<String>, String), Box<dy
                                     .strip_suffix(".zzz")
                                     .unwrap()
                                     .to_string();
-                                println!("{res}");
                                 Ok(('!', vec![], res))
                             }
                         } else {
@@ -551,11 +549,8 @@ pub fn scan_flags(argsv: &[String]) {
     if argsvstring.contains(&"-".to_string()) {
         let flags_index = argsvcv.iter().position(|x| x == &'-').unwrap();
         let flags_ctnr = &argsvcv[flags_index + 1..];
-        //println!("{:?}", flags_ctnr);
         for i in flags_ctnr {
-            //println!("{i}");
             for j in AVAILABLE_ARGS {
-                //println!("{:?}", j);
                 if j.switch == i.to_string() {
                     match j {
                         str if str == &VERBOSEARG => {
