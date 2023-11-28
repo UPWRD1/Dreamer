@@ -2,62 +2,71 @@
 // Extern Imports
 extern crate colored;
 
-use crate::helper::colored::Colorize;
+use crate::helper::{
+    colored::Colorize,
+    refs::{AVAILABLE_ARGS, CLEAN, CLEANARG, DUMBARG, FORCEARG, VERBOSEARG},
+};
 
 // Local Imports
-use super::refs::{ADDCMD, HELPCMD, INITCMD, LISTCMD, LOADCMD, RUNCMD};
-use crate::helper::{usage, verbose_check, Cmd};
+use super::refs::{
+    ADDCMD, AVAILABLE_CMDS, EXTCMD, FORCE, HELPCMD, LISTCMD, NEWCMD, RUNCMD, STARTCMD, VERBOSE, DUMB,
+};
+use crate::helper::{errors::Printerror, Cmd, PathBuf, NOFILESERROR};
 
 // std imports
 use std::{
     collections::hash_map::DefaultHasher,
-    env,
+    env::{self, VarError},
     error::Error,
     fmt::Arguments,
+    fs,
     fs::File,
     hash::{Hash, Hasher},
     io,
     io::{BufRead, Write},
-    iter::*,
+    sync::atomic::Ordering,
 };
 
+/// Print UI Error messages to stderr
 macro_rules! errprint {
     () => {
         eprint!("\n")
     };
     ($($arg:tt)*) => {{
-        eprintln!("    {0} {1}","[!]".red().bold(), format_args!($($arg)*))
+        eprintln!("{0} {1}","[!]".red().bold(), format_args!($($arg)*))
     }};
 }
-
+/// Print UI Info messages to stdout
 macro_rules! infoprint {
     () => {
         print!("\n")
     };
     ($($arg:tt)*) => {{
-        println!("    {0} {1}","[i]".blue().bold(), format_args!($($arg)*))
+        println!("{0} {1}","[i]".blue().bold(), format_args!($($arg)*))
     }};
 }
 
+/// Print UI warning messages to stderr
 macro_rules! warnprint {
     () => {
         eprint!("\n")
     };
     ($($arg:tt)*) => {{
-        eprintln!("    {0} {1}", "[W]".yellow().bold(), format_args!($($arg)*))
+        eprintln!("{0} {1}", "[w]".yellow().bold(), format_args!($($arg)*))
     }};
 }
 
+/// Print UI success messages to stdout
 macro_rules! successprint {
     () => {
         print!("\n")
     };
     ($($arg:tt)*) => {{
-        println!("    {0} {1}", "[✔]".green().bold(), format_args!($($arg)*))
+        println!("{0} {1}", "[✔]".green().bold(), format_args!($($arg)*))
     }};
 }
 
-pub fn read_line_expect<B: BufRead>(src: &mut B) -> io::Result<String> {
+fn read_line_expect<B: BufRead>(src: &mut B) -> io::Result<String> {
     src.lines().next().map_or(
         Err(io::Error::new(
             io::ErrorKind::UnexpectedEof,
@@ -77,6 +86,7 @@ pub fn input_fmt<B: BufRead, W: Write>(
     read_line_expect(src)
 }
 
+/// Input macro to facilitate user input
 macro_rules! input {
     () => {
         (read_line_expect(&mut std::io::stdin().lock()).unwrap())
@@ -86,43 +96,88 @@ macro_rules! input {
         (input_fmt(&mut std::io::stdin().lock(), &mut std::io::stdout(), format_args!($($arg)*)).unwrap())
     };
 }
-
+/// Wrapper for input!()
 macro_rules! questionprint {
     () => {
         input!()
     };
     ($($arg:tt)*) => {{
-        input!("    {0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
+        input!("{0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
     }};
 }
 
+macro_rules! questionprint_no_res {
+    () => {
+        input!()
+    };
+    ($($arg:tt)*) => {{
+        println!("{0} {1} ", "[?]".cyan().bold(), format_args!($($arg)*))
+    }};
+}
+
+/// Wrapper for input!()
+macro_rules! questionprintnof {
+    () => {
+        input!()
+    };
+    ($($arg:tt)*) => {{
+        input!("{0}{1} ", "", format_args!($($arg)*))
+    }};
+}
+
+macro_rules! verbose {
+    ($($args:tt)*) => {
+        if verbose_check() {
+            infoprint!($($args)*);
+        }
+    };
+}
+
+/// Macro for printing the shell
 macro_rules! shellprint {
     () => {
         input!()
     };
     ($($arg:tt)*) => {{
-        print!("    {0} {1} ", "[>]".yellow().bold(), format_args!($($arg)*))
+        print!("{0} {1} ", "[>]".yellow().bold(), format_args!($($arg)*))
     }};
 }
 
+/// Print UI tip messages to stdout
+macro_rules! tipprint {
+    () => {
+        input!()
+    };
+    ($($arg:tt)*) => {{
+        let content = format!("{0} {1}", "[i]".black(), format_args!($($arg)*));
+        println!("{}", content.black());
+    }};
+}
+
+/// Throw a fatal internal error.
 pub fn throw_fatal(msg: &str) {
     errprint!(
         "{0}{1}{2}",
         "FATAL ERROR: ".red().bold(),
         msg.red().bold(),
-        "\t If you somehow see this, you probably need to reinstall unify, like now."
+        "\t If you somehow see this, you probably need to reinstall Dreamer, like now."
             .red()
             .bold()
     );
 }
 
-pub fn printusage(msg: &str) {
+/// helper function for usage()
+fn printusage(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
-        infoprint!("Usage: {0}{1}", " ./unify ".black(), msg.black());
+        infoprint!("Usage: {0}{1}", " ./zzz ".black(), msg.black());
     } else if ostype == "linux" || ostype == "macos" {
-        infoprint!("Usage: {0}{1}", " unify ".black(), msg.black());
+        infoprint!("Usage: {0}{1}", " zzz ".black(), msg.black());
     }
+}
+
+pub fn usage(cmd: &str) {
+    printusage(matchcmd(cmd).unwrap().usage);
 }
 
 pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
@@ -131,12 +186,22 @@ pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
     s.finish()
 }
 
-pub fn printusagenb(msg: &str) {
+pub fn printusage_no_f(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
-        println!("\t{0}{1}{2}","Usage: ".bold(), " ./unify ".black(), msg.black());
+        println!(
+            "    {0}{1}{2}",
+            "Usage: ".bold(),
+            " ./zzz ".black(),
+            msg.black()
+        );
     } else if ostype == "linux" || ostype == "macos" {
-        println!("\t{0}{1}{2}","Usage: ".bold(), " unify ".black(), msg.black());
+        println!(
+            "    {0}{1}{2}",
+            "Usage: ".bold(),
+            " zzz ".black(),
+            msg.black()
+        );
     }
 }
 
@@ -166,7 +231,7 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
         println!("\t  {0}: {1}", i + 1, el);
         //count += 1;
     }
-    let result: String = questionprint!("==> ");
+    let result: String = questionprintnof!("==> ");
     let result_c: Vec<char> = result.chars().collect();
     //println!("{}", result_c.len());
     if result_c.len() == 1 {
@@ -194,38 +259,25 @@ pub fn quit_silent(status: i32) {
 pub fn clear_term() {
     print!("\x1B[2J\x1B[1;1H")
 }
-/*
-pub fn pause() {
-    let mut stdin = io::stdin();
-    let mut stdout = io::stdout();
-
-    write!(stdout, "{} Press any key to continue...", "[i]".blue().bold()).unwrap();
-    stdout.flush().unwrap();
-
-    let _ = stdin.read(&mut [0u8]).unwrap();
-    print!("\n");
-}
-*/
 
 pub fn long_infoprint(longdesc: &str) {
-    print!("\t{}", "Info: \n".bold());
+    print!("    {}", "Info: \n".bold());
     let char_desc: Vec<char> = longdesc.chars().collect();
-    print!("\t\t");
+    print!("             ");
     let mut numchars = 0;
     for i in &char_desc {
         numchars += 1;
         if numchars > 40 && (i == &' ' || i == &'\n') {
-            print!("\n\t");
-            print!("        ");
+            print!("\n");
+            print!("             ");
             numchars = 0;
-        } else if  i == &'!'{
-            print!("\n\n\t\t");
+        } else if i == &'!' {
+            print!("\n\n");
         } else {
             print!("{i}");
         }
-        
     }
-    println!("");
+    println!();
 }
 
 pub fn printhelp(cmd: &Cmd) {
@@ -235,24 +287,51 @@ pub fn printhelp(cmd: &Cmd) {
 pub fn printusetemplate() {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
-        infoprint!("{} ./unify [--help] <command> [arguments]\n", "Usage:".bold());
+        infoprint!("{} ./zzz [--help] <command> [arguments]\n", "Usage:".bold());
     } else if ostype == "linux" || ostype == "macos" {
-        infoprint!("{} unify [--help] <command> [arguments]\n", "Usage:".bold());
+        infoprint!("{} zzz [--help] <command> [arguments]\n", "Usage:".bold());
     }
 }
 
+fn printaliases(cmd: &Cmd<'_>) {
+    print!("    {}", "Aliases: ".bold());
+    for i in cmd.aliases {
+        print!("{}, ", i);
+    }
+    println!();
+}
+
 fn printextrahelp(cmd: Cmd) {
-    infoprint!("{}{}","Help:\t".bold(), cmd.name);
-    println!("");
-    printusagenb(cmd.usage);
-    println!("");
+    infoprint!("{}{}", "Help:\t".bold(), cmd.name);
+    println!();
+    printusage_no_f(cmd.usage);
+    println!();
+    printaliases(&cmd);
+    println!();
     long_infoprint(cmd.longdesc);
 }
 
-pub fn extrahelp(cmd: &str) {
-    match matchcmd(cmd) {
-        Ok(cmd) => printextrahelp(cmd),
-        Err(..) => usage_and_quit(HELPCMD.name, "Invalid Command Name"),
+pub fn extrahelp(cmd: &str, homedir: Result<String, VarError>) {
+    if cmd == "all" {
+        infoprint!("Available Commands:");
+        for x in AVAILABLE_CMDS {
+            print!("\t - ");
+            printhelp(x);
+        }
+        println!();
+        infoprint!("Available Extensions:");
+        let fhdir = format!("{}/.snooze/ext/", homedir.unwrap());
+        let paths = fs::read_dir(fhdir).unwrap();
+
+        for path in paths {
+            println!("\t - {}", path.unwrap().file_name().to_str().unwrap())
+        }
+    } else if cmd == "args" {
+    } else {
+        match matchcmd(cmd) {
+            Ok(cmd) => printextrahelp(cmd),
+            Err(..) => usage_and_quit(HELPCMD.name, "Invalid Command Name"),
+        }
     }
 }
 
@@ -264,10 +343,11 @@ pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
     match cmd {
         "help" => Ok(HELPCMD),
         "run" => Ok(RUNCMD),
-        "init" => Ok(INITCMD),
-        "load" => Ok(LOADCMD),
+        "new" => Ok(NEWCMD),
+        "start" => Ok(STARTCMD),
         "list" => Ok(LISTCMD),
         "add" => Ok(ADDCMD),
+        "ext" => Ok(EXTCMD),
         &_ => Err("INVALID CMD".to_string()),
     }
 }
@@ -278,12 +358,12 @@ pub fn read_file(
     caller: Cmd,
 ) -> Result<(File, String), (String, String)> {
     if to_open < argsv.len() {
-        let filepath = argsv[to_open].to_string().to_owned() + ".uni.yml";
+        let filepath = argsv[to_open].to_string().to_owned() + ".zzz.yml";
         let file: Result<File, std::io::Error> = File::open(filepath.clone());
         match file {
             Ok(v_file) => Ok((v_file, filepath)),
             Err(_error) => {
-                let filepath = argsv[to_open].to_string().to_owned() + ".uni.yaml";
+                let filepath = argsv[to_open].to_string().to_owned() + ".zzz.yaml";
                 let file: Result<File, std::io::Error> = File::open(filepath.clone());
                 match file {
                     Ok(v_file) => Ok((v_file, filepath)),
@@ -310,13 +390,12 @@ pub fn read_file_gpath_no_f(filename: &String) -> Result<(File, String), (String
 }
 
 pub fn read_file_gpath(filename: &String) -> Result<(File, String), (String, String)> {
-    let filepath1 = filename.to_string().to_owned() + ".uni.yml";
+    let filepath1 = filename.to_string().to_owned() + ".zzz.yml";
     let file: Result<File, std::io::Error> = File::open(filepath1.clone());
-    println!("asdf");
     match file {
         Ok(v_file) => Ok((v_file, filepath1)),
         Err(_error) => {
-            let filepath2 = filename.to_string().to_owned() + ".uni.yaml";
+            let filepath2 = filename.to_string().to_owned() + ".zzz.yaml";
             let file: Result<File, std::io::Error> = File::open(filepath2.clone());
             match file {
                 Ok(v_file) => Ok((v_file, filepath2)),
@@ -326,94 +405,103 @@ pub fn read_file_gpath(filename: &String) -> Result<(File, String), (String, Str
     }
 }
 
-pub fn print_file_list_main() -> Result<(char, Vec<String>), Box<dyn Error>> {
-    match env::current_dir() {
-        Ok(dir) => {
-            match crate::get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
-                Ok(paths) => {
-                    let paths_f: Vec<String> = paths
-                        .into_iter()
-                        .map(|s| {
-                            s.file_stem()
-                                .unwrap()
-                                .to_str()
-                                .map(|s| s.to_string())
-                                .unwrap()
-                        })
-                        .collect();
-                    let index = option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
-                    let index_c = index[0];
-                    if index_c.is_ascii_digit() {
-                        if index_c as usize == 0 {
-                            quit(0);
-                            Err("Quitted".into())
+pub fn print_file_list(way: usize) -> Result<(char, Vec<String>, String), Box<dyn Error>> {
+    if way == 0 {
+        match env::current_dir() {
+            Ok(dir) => {
+                match crate::helper::resource::get_yaml_paths(
+                    dir.into_os_string().into_string().unwrap().as_str(),
+                ) {
+                    Ok(paths) => {
+                        let paths_f: Vec<String> = paths
+                            .into_iter()
+                            .map(|s| {
+                                s.file_stem()
+                                    .unwrap()
+                                    .to_str()
+                                    .map(|s| s.to_string())
+                                    .unwrap()
+                            })
+                            .collect();
+                        let index =
+                            option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
+                        let index_c = index[0];
+                        if index_c.is_ascii_digit() {
+                            if index_c as usize == 0 {
+                                quit(0);
+                                Err("Quitted".into())
+                            } else {
+                                let index_u = index_c.to_digit(10).unwrap() as usize;
+                                let res = paths_f[index_u - 1]
+                                    .clone()
+                                    .strip_suffix(".zzz")
+                                    .unwrap()
+                                    .to_string();
+                                println!("{res}");
+                                Ok(('!', vec![], res))
+                            }
                         } else {
-                            Ok((index_c, paths_f))
+                            quit(1);
+                            Err("Not a digit".into())
                         }
-                    } else {
-                        quit(1);
-                        Err("Not a digit".into())
+                    }
+                    Err(..) => {
+                        throw_fatal("Very bad 2");
+                        Err("very bad".into())
                     }
                 }
-                Err(..) => {
-                    throw_fatal("Very bad 2");
-                    Err("Very bad".into())
-                }
+            }
+            Err(e) => {
+                throw_fatal(format!("Very Bad: {e}").as_str());
+                Err("oh crap".into())
             }
         }
-        Err(e) => {
-            throw_fatal(format!("Very Bad: {e}").as_str());
-            Err("oh crap".into())
-        }
-    }
-}
-
-pub fn print_file_list() -> Result<String, Box<dyn Error>> {
-    match env::current_dir() {
-        Ok(dir) => {
-            match crate::get_yaml_paths(dir.into_os_string().into_string().unwrap().as_str()) {
-                Ok(paths) => {
-                    let paths_f: Vec<String> = paths
-                        .into_iter()
-                        .map(|s| {
-                            s.file_stem()
-                                .unwrap()
-                                .to_str()
-                                .map(|s| s.to_string())
-                                .unwrap()
-                        })
-                        .collect();
-                    let index = option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
-                    let index_c = index[0];
-                    if index_c.is_ascii_digit() {
-                        if index_c as usize == 0 {
-                            quit(0);
-                            Err("Quitted".into())
+    } else if way == 1 {
+        match env::current_dir() {
+            Ok(dir) => {
+                match crate::helper::resource::get_yaml_paths(
+                    dir.into_os_string().into_string().unwrap().as_str(),
+                ) {
+                    Ok(paths) => {
+                        let paths_f: Vec<String> = paths
+                            .into_iter()
+                            .map(|s| {
+                                s.file_stem()
+                                    .unwrap()
+                                    .to_str()
+                                    .map(|s| s.to_string())
+                                    .unwrap()
+                            })
+                            .collect();
+                        let index =
+                            option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
+                        let index_c = index[0];
+                        if index_c.is_ascii_digit() {
+                            if index_c as usize == 0 {
+                                quit(0);
+                                Err("Quitted".into())
+                            } else {
+                                Ok((index_c, paths_f, index_c.to_string()))
+                            }
                         } else {
-                            let index_u = index_c.to_digit(10).unwrap() as usize;
-                            let res = paths_f[index_u - 1]
-                                .clone()
-                                .strip_suffix(".uni")
-                                .unwrap()
-                                .to_string();
-                            println!("{res}");
-                            Ok(res)
+                            quit(1);
+                            Err("Not a digit".into())
                         }
-                    } else {
-                        quit(1);
-                        Err("Not a digit".into())
+                    }
+                    Err(..) => {
+                        throw_fatal("Very bad 2");
+                        Err("Very bad".into())
                     }
                 }
-                Err(..) => {
-                    throw_fatal("Very bad 2");
-                    Err("very bad".into())
-                }
+            }
+            Err(e) => {
+                throw_fatal(format!("Very Bad: {e}").as_str());
+                Err("oh crap".into())
             }
         }
-        Err(e) => {
-            throw_fatal(format!("Very Bad: {e}").as_str());
-            Err("oh crap".into())
-        }
+    } else {
+        quit(4);
+        Err("INVALID".into())
     }
 }
 
@@ -422,11 +510,11 @@ pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
     cmd.aliases.contains(&argsv[pos].as_str())
 }
 
-pub fn continue_prompt(global_opts: &[bool]) {
-    if global_opts[1] {
-        ()
+pub fn continue_prompt() {
+    if FORCE.load(Ordering::Relaxed) {
     } else {
-        match questionprint!("Do you want to continue? (Y/N)").as_str() {
+        questionprint_no_res!("Do you want to continue? (y/n)");
+        match questionprintnof!("==>").as_str() {
             "y" | "Y" => {}
             &_ => {
                 quit(0);
@@ -435,9 +523,91 @@ pub fn continue_prompt(global_opts: &[bool]) {
     }
 }
 
-pub fn verbose_info_print(msg: String, global_opts: &[bool]) {
-    if verbose_check(global_opts) {
-        infoprint!("{msg}")
+pub fn verbose_check() -> bool {
+    VERBOSE.load(Ordering::Relaxed)
+}
+
+pub fn verbose_set_true() {
+    VERBOSE.store(true, Ordering::Relaxed);
+}
+
+pub fn force_set_true() {
+    FORCE.store(true, Ordering::Relaxed);
+}
+
+pub fn clean_set_true() {
+    CLEAN.store(true, Ordering::Relaxed);
+}
+
+pub fn dumb_set_true() {
+    DUMB.store(true, Ordering::Relaxed);
+}
+
+
+pub fn scan_flags(argsv: &[String]) {
+    let argsvstring = argsv.join(" ");
+    let argsvcv = argsvstring.chars().collect::<Vec<char>>();
+    //dbg!(&argsvstring);
+    if argsvstring.contains(&"-".to_string()) {
+        let flags_index = argsvcv.iter().position(|x| x == &'-').unwrap();
+        let flags_ctnr = &argsvcv[flags_index + 1..];
+        //println!("{:?}", flags_ctnr);
+        for i in flags_ctnr {
+            //println!("{i}");
+            for j in AVAILABLE_ARGS {
+                //println!("{:?}", j);
+                if j.switch == i.to_string() {
+                    match j {
+                        str if str == &VERBOSEARG => {
+                            verbose_set_true();
+                            break;
+                        }
+                        str if str == &FORCEARG => {
+                            force_set_true();
+                            break;
+                        }
+                        str if str == &CLEANARG => {
+                            clean_set_true();
+                            break;
+                        }
+                        str if str == &DUMBARG => {
+                            dumb_set_true();
+                            colored::control::set_override(false);
+                            break;
+                        }
+                        &_ => {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    } else {
     }
 }
 
+pub fn get_yaml_paths(dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+    let paths = std::fs::read_dir(dir)?
+        // Filter out all those directory entries which couldn't be read
+        .filter_map(|res| res.ok())
+        // Map the directory entries to paths
+        .map(|dir_entry| dir_entry.path())
+        // Filter out all paths with extensions other than .yaml or .yml
+        .filter_map(|path| {
+            if path
+                .extension()
+                .map_or(false, |ext| (ext == "yaml") || ext == "yml")
+            {
+                Some(path)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    if !paths.is_empty() {
+        Ok(paths)
+    } else {
+        NOFILESERROR.show_error("dummy");
+        Err("No files".into())
+    }
+}

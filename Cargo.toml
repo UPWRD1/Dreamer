@@ -1,6 +1,6 @@
 [package]
-name = "unify"
-version = "0.5.0"
+name = "zzz"
+version = "0.9.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -14,7 +14,12 @@ colored = "2"
 incremental = true
 
 [profile.release]
-opt-level = 3               # Use slightly better optimizations.
+opt-level = 3
 debug = 0
+codegen-units = 1
 lto = "thin"
 incremental = false
+
+[profile.release.package."*"] # +
+opt-level = 3 # +
+debug = 0

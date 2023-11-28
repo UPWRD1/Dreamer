@@ -1,0 +1,18 @@
+PROJECT:
+  NAME: test
+  PACKAGE: test
+  DESCRIPTION: ''
+  VERSION: 0.0.0
+  IS_LOADED: true
+ON:
+  RUN:
+  - echo hello world
+DEPENDANCIES:
+  TOOLS:
+  - NAME: motion
+    LINK: https://github.com/MotionLang/motion.git
+    METHOD: GIT
+
+
+
+
