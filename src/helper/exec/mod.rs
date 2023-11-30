@@ -231,28 +231,13 @@ fn load_conf(
             "{}/.snooze/cache/cache.zzz.yaml",
             home_dir.as_deref().unwrap()
         );
-        match read_cache(&cachefile_path) {
-            Ok(cachefile) => {
-                for i in &proj_conf.DEPENDANCIES.TOOLS {
-                    if let Some(tool) = cachefile.CACHE.iter().find(|x| x.PACKAGE == *i) {
-                        for j in tool.clone().REQUIRES {
-                            dep_vec.items.push(j.PACKAGE);
-                        }
-                        //println!("{} found!", tool.PACKAGE.NAME);
-                        dep_vec.items.push(tool.PACKAGE.clone());
-                    }
-                }
-                //println!("{:?}", dep_vec);
-                dep_vec.items.sort_unstable();
-                dedup(&mut dep_vec.items);
-                //println!("{:?}", dep_vec);
+        
+        for i in &proj_conf.DEPENDANCIES.TOOLS {
+            dep_vec = search_config(&cachefile_path, i, dep_vec)
+        }
 
-
-                for i in dep_vec.items {
-                    let _ = tool_install(&i, config_hash, &mut env_cmds, home_dir);
-                }
-            }
-            Err(..) => quit(4),
+        for i in dep_vec.items {
+            let _ = tool_install(&i, config_hash, &mut env_cmds, home_dir);
         }
         proj_conf.PROJECT.IS_LOADED = true;
         let f = std::fs::OpenOptions::new()
@@ -264,6 +249,27 @@ fn load_conf(
     }
     let result = (env_cmds, config_hash);
     Ok(result)
+}
+
+fn search_config(cachefile_path: &String, to_find: &ConfigTool, mut dep_vec: ToolVec) -> ToolVec {
+    match read_cache(cachefile_path) {
+        Ok(cachefile) => {
+                if let Some(tool) = cachefile.CACHE.iter().find(|x| x.PACKAGE == *to_find) {
+                    for j in tool.clone().REQUIRES {
+                        dep_vec.items.push(j.PACKAGE);
+                    }
+                    //println!("{} found!", tool.PACKAGE.NAME);
+                    dep_vec.items.push(tool.PACKAGE.clone());
+                } else {
+                    errprint!("Tool '{}' not found!", to_find.NAME);
+                }
+                dep_vec.items.sort_unstable();
+                dedup(&mut dep_vec.items);
+                dep_vec
+            }
+            
+        Err(..) => {quit(4); return dep_vec},
+    }
 }
 
 pub fn load_start(

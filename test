@@ -1,0 +1,69 @@
+DepTreeTool { 
+    tool: ConfigTool { 
+        NAME: "motion", 
+        LINK: "https://github.com/MotionLang/motion.git", 
+        METHOD: GIT 
+    }, 
+    config: Some(
+        ZzzConfig { 
+            PROJECT: ProjectConfig { 
+                NAME: "test", 
+                PACKAGE: "test", 
+                DESCRIPTION: "", 
+                VERSION: "0.0.0", 
+                IS_LOADED: true 
+            }, 
+            ON: ZzzRunConfig { 
+                RUN: ["echo hello world"] 
+            }, 
+            DEPENDANCIES: ZzzDepsConfig { 
+                TOOLS: [
+                    ConfigTool { 
+                        NAME: "motion", 
+                        LINK: "https://github.com/MotionLang/motion.git", 
+                        METHOD: GIT
+                    }
+                ] 
+            } 
+        }
+    ),
+    is_root: false,
+    hash: 12484011105116190539, 
+    dependancies: [
+        DepTreeTool { 
+            tool: ConfigTool { 
+                NAME: "motion",
+                LINK: "https://github.com/MotionLang/motion.git", 
+                METHOD: GIT 
+            }, 
+            config: Some(
+                ZzzConfig { 
+                    PROJECT: ProjectConfig { 
+                        NAME: "test", 
+                        PACKAGE: "test", 
+                        DESCRIPTION: "", 
+                        VERSION: "0.0.0", 
+                        IS_LOADED: true 
+                    }, 
+                    ON: ZzzRunConfig { 
+                        RUN: [
+                            "echo hello world"
+                        ] 
+                    }, 
+                    DEPENDANCIES: ZzzDepsConfig { 
+                        TOOLS: [
+                            ConfigTool { 
+                                NAME: "motion", 
+                                LINK: "https://github.com/MotionLang/motion.git", 
+                                METHOD: GIT 
+                            }
+                        ] 
+                    } 
+                }
+            ), 
+            is_root: true, 
+            hash: 12484011105116190539, 
+            dependancies: [] 
+        }
+    ] 
+}
