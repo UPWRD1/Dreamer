@@ -106,42 +106,42 @@ pub const COMMON_CMDS: [&Cmd; 5] = [&HELPCMD, &NEWCMD, &STARTCMD, &ADDCMD, &REMO
 #[derive(PartialEq, Eq, Debug)]
 pub struct Arg<'a> {
     pub name: &'a str,
-    pub switch: &'a str,
+    pub string_switch: &'a str,
     pub desc: &'a str,
     pub index: usize,
 }
 
 pub static VERBOSEARG: Arg = Arg {
     name: "verbose",
-    switch: "v",
+    string_switch: "v",
     desc: "Enables verbose output. Useful for debugging and logs.",
     index: 0,
 };
 
 pub static FORCEARG: Arg = Arg {
     name: "force",
-    switch: "f",
+    string_switch: "f",
     desc: "Forces continuation. Errors are disregarded, prompts are skipped.",
     index: 1,
 };
 
 pub static CLEANARG: Arg = Arg {
     name: "clean",
-    switch: "c",
+    string_switch: "c",
     desc: "Forces clean loading. Files executed are treated as if the are being loaded for the first time.",
     index: 2,
 };
 
 pub static DUMBARG: Arg = Arg {
     name: "dumb",
-    switch: "d",
+    string_switch: "d",
     desc: "Disables color output. Useful for non-color-supporting systems.",
     index: 3,
 };
 
-pub static VERBOSE: AtomicBool = AtomicBool::new(false);
-pub static FORCE: AtomicBool = AtomicBool::new(false);
-pub static CLEAN: AtomicBool = AtomicBool::new(false);
-pub static DUMB: AtomicBool = AtomicBool::new(false);
+pub static VERBOSE_FLAG: AtomicBool = AtomicBool::new(false);
+pub static FORCE_FLAG: AtomicBool = AtomicBool::new(false);
+pub static CLEAN_FLAG: AtomicBool = AtomicBool::new(false);
+pub static DUMB_FLAG: AtomicBool = AtomicBool::new(false);
 
 pub static AVAILABLE_ARGS: [&Arg; 4] = [&VERBOSEARG, &FORCEARG, &CLEANARG, &DUMBARG];

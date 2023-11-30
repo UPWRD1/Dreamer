@@ -8,14 +8,14 @@ use crate::{
         resource::{calculate_hash, continue_prompt, input_fmt, read_file_gpath, verbose_check},
         run, usage_and_quit, ConfigTool, ConfigToolInstallMethod, ZzzConfig,
     },
-    list, STARTCMD,
+    STARTCMD,
 };
 
 use crate::helper::errors::*;
 
 // std imports
 use std::{
-    env,
+    env::{self},
     error::Error,
     fs,
     fs::File,
@@ -24,8 +24,9 @@ use std::{
 };
 
 use super::{
-    refs::CLEAN,
-    resource::{quit, read_file_gpath_no_f}, TreeTool,
+    refs::CLEAN_FLAG,
+    resource::{quit, read_file_gpath_no_f},
+    ToolVec, ZzzCacheFile,
 };
 
 pub fn read_config(filepath: &String) -> Result<ZzzConfig, String> {
@@ -41,6 +42,28 @@ pub fn read_config(filepath: &String) -> Result<ZzzConfig, String> {
             }
         }
         Err(..) => {
+            MISSINGFILEERROR.show_error(filepath);
+            Err("Invalid Config".into())
+        }
+    }
+}
+
+pub fn read_cache(filepath: &String) -> Result<ZzzCacheFile, String> {
+    match read_file_gpath_no_f(filepath) {
+        Ok(v_file) => {
+            let config: Result<ZzzCacheFile, serde_yaml::Error> =
+                serde_yaml::from_reader(&v_file.0);
+            match config {
+                Err(e) => {
+                    eprintln!("{}", e);
+                    MISSINGFILEERROR.show_error(filepath);
+                    Err("Invalid Config".into())
+                }
+                Ok(con) => Ok(con),
+            }
+        }
+        Err(e) => {
+            println!("{}\n\n{}", e.0, e.1);
             MISSINGFILEERROR.show_error(filepath);
             Err("Invalid Config".into())
         }
@@ -164,53 +187,86 @@ pub fn remove_exec(filepath: &String, depname: &String) -> Result<(), Box<dyn Er
 }
 
 pub fn load_exec(
-    v_file: File,
-    filepath: String,
-    mut env_cmds: Vec<String>,
+    root_config_file: File,
+    root_config_filepath: String,
+    env_cmds: Vec<String>,
     mut home_dir: Result<String, env::VarError>,
-    argsv: Vec<String>,
+    dep_vec: ToolVec,
 ) -> Result<(Vec<String>, u64), Box<dyn Error>> {
-    let reader: BufReader<File> = BufReader::new(v_file);
+    let reader: BufReader<File> = BufReader::new(root_config_file);
     // Parse the YAML into DepConfig struct
     let config: Result<ZzzConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
     match config {
         Err(_) => {
-            MISSINGFILEERROR.show_error(&filepath);
+            MISSINGFILEERROR.show_error(&root_config_filepath);
             Err("Invalid Config".into())
         }
-        Ok(mut config) => {
-            let tohash = format!(
-                "{}{}{}{}",
-                &config.PROJECT.NAME,
-                &config.PROJECT.DESCRIPTION,
-                &config.PROJECT.PACKAGE,
-                &config.PROJECT.VERSION
-            );
-            let hashname = calculate_hash(&tohash);
-            if !config.PROJECT.IS_LOADED || CLEAN.load(std::sync::atomic::Ordering::Relaxed) {
-                let _ = list(argsv.clone(), 2);
-                let mut root = TreeTool::new(ConfigTool { NAME: "".into(), LINK: "".into(), METHOD: ConfigToolInstallMethod::LINKZIP});
-                verbose!("This action will download the above, and run any tasks included.");
-                continue_prompt();
-                verbose!("Identifing Dependancies from file: '{}'", filepath);
-                for tool in &config.DEPENDANCIES.TOOLS {
-                    let _ = tool_install(tool, hashname, &mut root, &mut env_cmds, &mut home_dir);
-                }
-                config.PROJECT.IS_LOADED = true;
-                let f = std::fs::OpenOptions::new()
-                    .write(true)
-                    .create(true)
-                    .open(filepath)
-                    .expect("Couldn't open file");
-                serde_yaml::to_writer(f, &config).unwrap();
-            }
-            let result = (env_cmds, hashname);
-            Ok(result)
-        }
+        Ok(config) => load_conf(
+            &config,
+            &root_config_filepath,
+            env_cmds,
+            &mut home_dir,
+            dep_vec,
+        ),
     }
 }
 
-pub fn load_deps(
+fn dedup<T: Eq + std::hash::Hash + Clone>(v: &mut Vec<T>) { // note the Copy constraint
+    let mut uniques = std::collections::HashSet::new();
+    v.retain(|e| uniques.insert(e.clone()));
+}
+
+
+fn load_conf(
+    config: &ZzzConfig,
+    root_config_filepath: &String,
+    mut env_cmds: Vec<String>,
+    home_dir: &mut Result<String, env::VarError>,
+    mut dep_vec: ToolVec,
+) -> Result<(Vec<String>, u64), Box<dyn Error>> {
+    let config_hash = calculate_hash(config);
+    let mut proj_conf = config.clone();
+    if !proj_conf.PROJECT.IS_LOADED || CLEAN_FLAG.load(std::sync::atomic::Ordering::Relaxed) {
+        let cachefile_path = format!(
+            "{}/.snooze/cache/cache.zzz.yaml",
+            home_dir.as_deref().unwrap()
+        );
+        match read_cache(&cachefile_path) {
+            Ok(cachefile) => {
+                for i in &proj_conf.DEPENDANCIES.TOOLS {
+                    if let Some(tool) = cachefile.CACHE.iter().find(|x| x.PACKAGE == *i) {
+                        for j in tool.clone().REQUIRES {
+                            dep_vec.items.push(j.PACKAGE);
+                        }
+                        //println!("{} found!", tool.PACKAGE.NAME);
+                        dep_vec.items.push(tool.PACKAGE.clone());
+                    }
+                }
+                //println!("{:?}", dep_vec);
+                dep_vec.items.sort_unstable();
+                dedup(&mut dep_vec.items);
+                //println!("{:?}", dep_vec);
+
+
+                for i in dep_vec.items {
+                    let _ = tool_install(&i, config_hash, &mut env_cmds, home_dir);
+                }
+            }
+            Err(..) => quit(4),
+        }
+        proj_conf.PROJECT.IS_LOADED = true;
+        let f = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(root_config_filepath)
+            .expect("Couldn't open file");
+        serde_yaml::to_writer(f, &proj_conf).unwrap();
+    }
+    let result = (env_cmds, config_hash);
+    Ok(result)
+}
+
+pub fn load_start(
     argsv: Vec<String>,
     env_cmds: &[String],
     home_dir: Result<String, env::VarError>,
@@ -220,8 +276,11 @@ pub fn load_deps(
         return Err("Bad File".into());
     } else {
         let _: Result<(Vec<String>, u64), ()> = match read_file(&argsv, 2, STARTCMD) {
-            Ok(v_file) => {
-                let result = load_exec(v_file.0, v_file.1, env_cmds.to_vec(), home_dir, argsv);
+            Ok(v_config_file) => {
+                let dep_vec: ToolVec = ToolVec { items: vec![] };
+                infoprint!("Starting...");
+                let result: Result<(Vec<String>, u64), Box<dyn Error>> =
+                    load_exec(v_config_file.0, v_config_file.1, env_cmds.to_vec(), home_dir, dep_vec);
 
                 return result;
             }
@@ -235,9 +294,8 @@ pub fn load_deps(
 }
 
 fn tool_install(
-    tool: &TreeTool,
+    tool: &ConfigTool,
     hashname: u64,
-    root: &mut TreeTool,
     env_cmds: &mut Vec<String>,
     home_dir: &mut Result<String, env::VarError>,
 ) -> Result<(), Box<dyn Error>> {
@@ -246,7 +304,6 @@ fn tool_install(
     let link = &tool.LINK;
     let method = &tool.METHOD;
     let link_str = link.to_string();
-    root.add(tool.clone());
     match method {
         ConfigToolInstallMethod::LINKZIP => {
             if cfg!(windows) {
@@ -262,6 +319,8 @@ fn tool_install(
                 unix_git_install(home_dir, hashname, tool, link_str)
             }
         }
+
+        &ConfigToolInstallMethod::ROOT => Ok(()),
     }
 }
 
@@ -462,15 +521,33 @@ fn windows_git_install(
                         let _: Result<(), Box<dyn Error>> = match read_file(&argsv, 2, STARTCMD) {
                             Ok(v_file) => {
                                 let reader: BufReader<File> = BufReader::new(v_file.0);
-
                                 let nconfig: Result<ZzzConfig, serde_yaml::Error> =
                                     serde_yaml::from_reader(reader);
+                                if !nconfig
+                                    .as_ref()
+                                    .unwrap()
+                                    .clone()
+                                    .DEPENDANCIES
+                                    .TOOLS
+                                    .is_empty()
+                                {
+                                    //println!("{:?}", nconfig);
+                                    /*
+                                    let _ = load_conf(
+                                        nconfig.as_ref().unwrap(),
+                                        &root_config_filepath,
+                                        env_cmds.to_vec(),
+                                        home_dir,
+                                    );
+                                     */
+                                }
                                 verbose!("Building...");
-                                let args: Vec<String> = vec!["zzz".into(), "run".into(), "dream".into()];
+                                let args: Vec<String> =
+                                    vec!["zzz".into(), "run".into(), "dream".into()];
                                 let status = run(args);
                                 if status.is_ok() {
                                     let package = &nconfig.unwrap().PROJECT.PACKAGE;
-                                    println!("{package}");
+                                    verbose!("'{package}': OK");
                                     let install_loc = format!(
                                         "{}/.snooze/bins/{}/",
                                         home_dir.as_ref().unwrap(),
@@ -531,7 +608,7 @@ pub fn run_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
             let mut okcount: i32 = 0;
             let mut cmdcount: i32 = 0;
             // Execute commands in the 'run' section
-            infoprint!("Running '{}': \n", filepath);
+            verbose!("Running '{}': \n", filepath);
             for command in config.ON.RUN {
                 cmdcount += 1;
                 let mut parts = command.split_whitespace();
@@ -546,8 +623,8 @@ pub fn run_exec(v_file: File, filepath: String) -> Result<(), Box<dyn Error>> {
                 }
             }
             if cmdcount == okcount {
-                println!();
-                successprint!("All tasks completed successfully");
+                verbose!("\n");
+                verbose!("All tasks completed successfully");
             }
             Ok(())
         }
@@ -626,14 +703,7 @@ pub fn forget_exec(
     let config = read_config(filepath);
     match config {
         Ok(conf) => {
-            let tohash = format!(
-                "{}{}{}{}",
-                &conf.PROJECT.NAME,
-                &conf.PROJECT.DESCRIPTION,
-                &conf.PROJECT.PACKAGE,
-                &conf.PROJECT.VERSION
-            );
-            let hashname = calculate_hash(&tohash);
+            let hashname = calculate_hash(&conf);
             let pathtorm = format!("{}/.snooze/bins/{}", home_dir.as_ref().unwrap(), hashname);
             let pathtorm_f = format!("~/.snooze/bins/{}", hashname);
             warnprint!("This will remove '{}'!", pathtorm_f);

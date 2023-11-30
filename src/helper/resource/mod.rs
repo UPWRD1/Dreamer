@@ -4,12 +4,16 @@ extern crate colored;
 
 use crate::helper::{
     colored::Colorize,
-    refs::{AVAILABLE_ARGS, CLEAN, CLEANARG, DUMBARG, FORCEARG, VERBOSEARG},
+    refs::{AVAILABLE_ARGS, CLEAN_FLAG, CLEANARG, DUMBARG, FORCEARG, VERBOSEARG},
 };
 
 // Local Imports
-use super::refs::{
-    ADDCMD, AVAILABLE_CMDS, EXTCMD, FORCE, HELPCMD, LISTCMD, NEWCMD, RUNCMD, STARTCMD, VERBOSE, DUMB,
+use super::{
+    refs::{
+        ADDCMD, AVAILABLE_CMDS, DUMB_FLAG, EXTCMD, FORCE_FLAG, HELPCMD, LISTCMD, NEWCMD, RUNCMD, STARTCMD,
+        VERBOSE_FLAG,
+    },
+    ZzzConfig,
 };
 use crate::helper::{errors::Printerror, Cmd, PathBuf, NOFILESERROR};
 
@@ -167,7 +171,7 @@ pub fn throw_fatal(msg: &str) {
 }
 
 /// helper function for usage()
-fn printusage(msg: &str) {
+fn print_usage(msg: &str) {
     let ostype = std::env::consts::OS;
     if ostype == "windows" {
         infoprint!("Usage: {0}{1}", " ./zzz ".black(), msg.black());
@@ -177,13 +181,27 @@ fn printusage(msg: &str) {
 }
 
 pub fn usage(cmd: &str) {
-    printusage(matchcmd(cmd).unwrap().usage);
+    print_usage(match_command(cmd).unwrap().usage);
 }
 
-pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
+#[deprecated]
+pub fn old_calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
+}
+
+pub fn calculate_hash(config: &ZzzConfig) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    let tohash = format!(
+        "{}{}{}{}",
+        &config.PROJECT.NAME,
+        &config.PROJECT.DESCRIPTION,
+        &config.PROJECT.PACKAGE,
+        &config.PROJECT.VERSION
+    );
+    tohash.hash(&mut hasher);
+    hasher.finish()
 }
 
 pub fn printusage_no_f(msg: &str) {
@@ -227,15 +245,15 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
         }
     }
     //let mut count = 1;
-    for (i, el) in opts.iter().enumerate() {
-        println!("\t  {0}: {1}", i + 1, el);
+    for (count, item) in opts.iter().enumerate() {
+        println!("\t  {0}: {1}", count + 1, item);
         //count += 1;
     }
     let result: String = questionprintnof!("==> ");
-    let result_c: Vec<char> = result.chars().collect();
-    if result_c.len() == 1 {
-        match result_c[0] {
-            '1'..='9' => return result_c,
+    let result_as_char_vec: Vec<char> = result.chars().collect();
+    if result_as_char_vec.len() == 1 {
+        match result_as_char_vec[0] {
+            '1'..='9' => return result_as_char_vec,
             _ => {
                 quit(0);
             }
@@ -243,7 +261,7 @@ pub fn option_list(kind: &str, opts: Vec<String>, msg: &str) -> Vec<char> {
     } else {
         quit(0);
     }
-    result_c
+    result_as_char_vec
 }
 
 pub fn quit(status: i32) {
@@ -261,19 +279,19 @@ pub fn clear_term() {
 
 pub fn long_infoprint(longdesc: &str) {
     print!("    {}", "Info: \n".bold());
-    let char_desc: Vec<char> = longdesc.chars().collect();
+    let description_as_char_vec: Vec<char> = longdesc.chars().collect();
     print!("             ");
-    let mut numchars = 0;
-    for i in &char_desc {
-        numchars += 1;
-        if numchars > 40 && (i == &' ' || i == &'\n') {
-            print!("\n");
+    let mut counter = 0;
+    for char_item in &description_as_char_vec {
+        counter += 1;
+        if counter > 40 && (char_item == &' ' || char_item == &'\n') {
+            println!();
             print!("             ");
-            numchars = 0;
-        } else if i == &'!' {
+            counter = 0;
+        } else if char_item == &'!' {
             print!("\n\n");
         } else {
-            print!("{i}");
+            print!("{char_item}");
         }
     }
     println!();
@@ -327,7 +345,7 @@ pub fn extrahelp(cmd: &str, homedir: Result<String, VarError>) {
         }
     } else if cmd == "args" {
     } else {
-        match matchcmd(cmd) {
+        match match_command(cmd) {
             Ok(cmd) => printextrahelp(cmd),
             Err(..) => usage_and_quit(HELPCMD.name, "Invalid Command Name"),
         }
@@ -338,7 +356,7 @@ pub fn check_arg_len(argsv: Vec<String>, lentocheck: usize) -> bool {
     argsv.len() == lentocheck
 }
 
-pub fn matchcmd(cmd: &str) -> Result<Cmd, String> {
+pub fn match_command(cmd: &str) -> Result<Cmd, String> {
     match cmd {
         "help" => Ok(HELPCMD),
         "run" => Ok(RUNCMD),
@@ -360,12 +378,12 @@ pub fn read_file(
         let filepath = argsv[to_open].to_string().to_owned() + ".zzz.yml";
         let file: Result<File, std::io::Error> = File::open(filepath.clone());
         match file {
-            Ok(v_file) => Ok((v_file, filepath)),
+            Ok(ok_file) => Ok((ok_file, filepath)),
             Err(_error) => {
                 let filepath = argsv[to_open].to_string().to_owned() + ".zzz.yaml";
                 let file: Result<File, std::io::Error> = File::open(filepath.clone());
                 match file {
-                    Ok(v_file) => Ok((v_file, filepath)),
+                    Ok(ok_file) => Ok((ok_file, filepath)),
                     Err(error) => Err((error.to_string(), filepath)),
                 }
             }
@@ -412,7 +430,7 @@ pub fn print_file_list(way: usize) -> Result<(char, Vec<String>, String), Box<dy
                     dir.into_os_string().into_string().unwrap().as_str(),
                 ) {
                     Ok(paths) => {
-                        let paths_f: Vec<String> = paths
+                        let paths_as_string: Vec<String> = paths
                             .into_iter()
                             .map(|s| {
                                 s.file_stem()
@@ -423,20 +441,20 @@ pub fn print_file_list(way: usize) -> Result<(char, Vec<String>, String), Box<dy
                             })
                             .collect();
                         let index =
-                            option_list("info", paths_f.clone(), "Choose a file (0 to quit):");
-                        let index_c = index[0];
-                        if index_c.is_ascii_digit() {
-                            if index_c as usize == 0 {
+                            option_list("info", paths_as_string.clone(), "Choose a file (0 to quit):");
+                        let index_as_char = index[0];
+                        if index_as_char.is_ascii_digit() {
+                            if index_as_char as usize == 0 {
                                 quit(0);
                                 Err("Quitted".into())
                             } else {
-                                let index_u = index_c.to_digit(10).unwrap() as usize;
-                                let res = paths_f[index_u - 1]
+                                let index_as_usize = index_as_char.to_digit(10).unwrap() as usize;
+                                let result_string = paths_as_string[index_as_usize - 1]
                                     .clone()
                                     .strip_suffix(".zzz")
                                     .unwrap()
                                     .to_string();
-                                Ok(('!', vec![], res))
+                                Ok(('!', vec![], result_string))
                             }
                         } else {
                             quit(1);
@@ -509,7 +527,7 @@ pub fn argparse(argsv: &[String], pos: usize, cmd: Cmd) -> bool {
 }
 
 pub fn continue_prompt() {
-    if FORCE.load(Ordering::Relaxed) {
+    if FORCE_FLAG.load(Ordering::Relaxed) {
     } else {
         questionprint_no_res!("Do you want to continue? (y/n)");
         match questionprintnof!("==>").as_str() {
@@ -522,37 +540,36 @@ pub fn continue_prompt() {
 }
 
 pub fn verbose_check() -> bool {
-    VERBOSE.load(Ordering::Relaxed)
+    VERBOSE_FLAG.load(Ordering::Relaxed)
 }
 
 pub fn verbose_set_true() {
-    VERBOSE.store(true, Ordering::Relaxed);
+    VERBOSE_FLAG.store(true, Ordering::Relaxed);
 }
 
 pub fn force_set_true() {
-    FORCE.store(true, Ordering::Relaxed);
+    FORCE_FLAG.store(true, Ordering::Relaxed);
 }
 
 pub fn clean_set_true() {
-    CLEAN.store(true, Ordering::Relaxed);
+    CLEAN_FLAG.store(true, Ordering::Relaxed);
 }
 
 pub fn dumb_set_true() {
-    DUMB.store(true, Ordering::Relaxed);
+    DUMB_FLAG.store(true, Ordering::Relaxed);
 }
 
-
 pub fn scan_flags(argsv: &[String]) {
-    let argsvstring = argsv.join(" ");
-    let argsvcv = argsvstring.chars().collect::<Vec<char>>();
+    let argsv_as_joined_string = argsv.join(" ");
+    let argsv_string_as_chars = argsv_as_joined_string.chars().collect::<Vec<char>>();
     //dbg!(&argsvstring);
-    if argsvstring.contains(&"-".to_string()) {
-        let flags_index = argsvcv.iter().position(|x| x == &'-').unwrap();
-        let flags_ctnr = &argsvcv[flags_index + 1..];
-        for i in flags_ctnr {
-            for j in AVAILABLE_ARGS {
-                if j.switch == i.to_string() {
-                    match j {
+    if argsv_as_joined_string.contains(&"-".to_string()) {
+        let flags_index = argsv_string_as_chars.iter().position(|x| x == &'-').unwrap();
+        let flags_counter = &argsv_string_as_chars[flags_index + 1..];
+        for char_item in flags_counter {
+            for argument in AVAILABLE_ARGS {
+                if argument.string_switch == char_item.to_string() {
+                    match argument {
                         str if str == &VERBOSEARG => {
                             verbose_set_true();
                             break;
@@ -577,7 +594,6 @@ pub fn scan_flags(argsv: &[String]) {
                 }
             }
         }
-    } else {
     }
 }
 

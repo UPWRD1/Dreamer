@@ -9,7 +9,6 @@ edition = "2021"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_yaml = { version = "0.9.25" }
 colored = "2"
-
 [profile.dev]
 incremental = true
 

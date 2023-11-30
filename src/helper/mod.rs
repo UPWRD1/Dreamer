@@ -38,7 +38,7 @@ use std::str::FromStr;
 
 pub const SELF_VERSION: &str = "2023 (0.1.0)";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub struct ProjectConfig {
     NAME: String,
@@ -48,13 +48,27 @@ pub struct ProjectConfig {
     IS_LOADED: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ConfigToolInstallMethod {
     LINKZIP,
     GIT,
+    ROOT,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[allow(non_snake_case)]
+pub struct CacheTool {
+    PACKAGE: ConfigTool,
+    REQUIRES: Vec<CacheTool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[allow(non_snake_case)]
+pub struct ZzzCacheFile {
+    CACHE: Vec<CacheTool>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
 #[allow(non_snake_case)]
 pub struct ConfigTool {
     NAME: String,
@@ -62,42 +76,29 @@ pub struct ConfigTool {
     METHOD: ConfigToolInstallMethod,
 }
 
-pub struct TreeTool {
-    tool: ConfigTool,
-    dependancies: Vec<ConfigTool>
+#[derive(Debug, Clone)]
+pub struct ToolVec {
+    pub items: Vec<ConfigTool>,
 }
 
-impl TreeTool {
-    fn new(tool: ConfigTool) -> Self {
-        TreeTool { tool, dependancies: vec![] }
-    }
-    
-    fn add<T>(&mut self, tool: T) {
-        where
-            T: TreeTool,
-            
-        self.dependancies.push(tool)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
-pub struct DepsConfig {
+pub struct ZzzDepsConfig {
     TOOLS: Vec<ConfigTool>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
-pub struct RunConfig {
+pub struct ZzzRunConfig {
     RUN: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub struct ZzzConfig {
     PROJECT: ProjectConfig,
-    ON: RunConfig,
-    DEPENDANCIES: DepsConfig,
+    ON: ZzzRunConfig,
+    DEPENDANCIES: ZzzDepsConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -212,7 +213,7 @@ pub fn start(
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
 ) -> Result<(), Box<dyn Error>> {
-    match load_deps(argsv.to_owned(), &env_cmds.to_vec(), home_dir.clone()) {
+    match load_start(argsv.to_owned(), &env_cmds.to_vec(), home_dir.clone()) {
         Err(_) => {
             quit(3);
             Err("Error Loading".into())
@@ -229,7 +230,7 @@ pub fn start_and_run(
     env_cmds: Vec<String>,
     home_dir: Result<String, env::VarError>,
 ) -> Result<(), Box<dyn Error>> {
-    match load_deps(argsv.to_owned(), &env_cmds.to_vec(), home_dir.clone()) {
+    match load_start(argsv.to_owned(), &env_cmds.to_vec(), home_dir.clone()) {
         Err(_) => {
             quit(2);
             Err("Error Loading".into())

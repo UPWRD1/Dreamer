@@ -1,0 +1,14 @@
+CACHE:
+    motion:
+    - NAME: motion
+      LINK: https://github.com/MotionLang/motion.git
+      METHOD: GIT
+      REQUIRES: [
+        knockout,
+      ]
+
+    knockout:
+      - NAME: knockout
+        LINK: https://github.com/UPWRD1/knockout.git
+        METHOD: GIT
+        REQUIRES: []
